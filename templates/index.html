@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentGPE</title>
+    <link href="{% static 'css/index.css' %}" rel="stylesheet">
+    <script src="{% static 'js/index.js' %}"></script>
+</head>
+<body>
+    <div class="header compact">
+        <h1>Agent GPE</h1>
+        <button id="settings-btn" onclick="toggleSettings()">⚙️ Settings</button>
+    </div>
+
+    <div id="settings-panel">
+        <div class="settings-grid">
+            <label for="server-host">Server Host:</label>
+            <input type="text" id="server-host" value="localhost">
+
+            <label for="server-port">Server Port:</label>
+            <input type="number" id="server-port" value="3000" min="1" max="65535">
+
+            <label for="use-secure">Use Secure Connection:</label>
+            <input type="checkbox" id="use-secure">
+
+            <label for="dark-mode">Dark Mode:</label>
+            <div class="theme-switch">
+                <input type="checkbox" id="dark-mode" class="theme-switch-checkbox">
+                <label for="dark-mode" class="theme-switch-label"></label>
+            </div>
+        </div>
+        <button id="save-settings" class="save-btn" onclick="saveAndApplySettings()">Save Settings</button>
+    </div>
+
+    <div class="flex-container">
+        <div id="chat-container"></div>
+        <div id="progress-container">
+            <h3>Processing Steps</h3>
+            <div id="progress-log"></div>
+        </div>
+    </div>
+
+    <div id="input-container" class="centered">
+        <textarea id="user-input" rows="3" placeholder="How can I help you today?"></textarea>
+        <button id="send-button" onclick="sendMessage()">Send</button>
+    </div>
+
+
+    <div id="status-bar">
+        <div id="status">Disconnected</div>
+        <div class="buttons-container">
+            <button id="clear-progress">Clear Progress</button>
+            <button id="clear-chat">Clear Chat</button>
+        </div>
+    </div>
+
+</body>
+<script>
+// This is a self-contained script that will fix the button issue
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Running button fix script");
+    const sendButton = document.getElementById('send-button');
+    const userInput = document.getElementById('user-input');
+
+    if (sendButton) {
+        // Remove any existing onclick attribute
+        sendButton.removeAttribute('onclick');
+
+        // Add a completely isolated click handler
+        sendButton.addEventListener('click', function(event) {
+            console.log("Send button clicked - isolated handler");
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Show the full UI - force transitions
+            const flexContainer = document.querySelector('.flex-container');
+            const statusBar = document.getElementById('status-bar');
+            const settingsBtn = document.getElementById('settings-btn');
+            const header = document.querySelector('.header');
+            const inputContainer = document.getElementById('input-container');
+
+            // Force display transitions
+            flexContainer.classList.add('visible');
+            flexContainer.style.opacity = '1';
+            flexContainer.style.maxHeight = '1000px';
+            flexContainer.style.visibility = 'visible';
+
+            statusBar.classList.add('visible');
+            settingsBtn.classList.add('visible');
+            header.classList.remove('compact');
+            inputContainer.classList.remove('centered');
+
+            // Now trigger sending functionality
+            if (window.sendMessage) {
+                window.sendMessage();
+            } else {
+                // Fallback if global function isn't accessible
+                const message = userInput.value.trim();
+                if (message) {
+                    // Just add the message to indicate it's working
+                    const chatContainer = document.getElementById('chat-container');
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'user-message';
+                    messageDiv.textContent = message;
+                    chatContainer.appendChild(messageDiv);
+                    userInput.value = '';
+                }
+            }
+
+            return false;
+        });
+
+        console.log("Button handler attached successfully");
+    } else {
+        console.error("Send button not found in the DOM");
+    }
+});
+</script>
+</html>
