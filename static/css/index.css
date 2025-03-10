@@ -5,8 +5,8 @@
     --background-color: #F6F4F0;
     --hover-color: #fbf9f5;
     --card-color: #FFFFFF;
-    --user-msg-color: #F0EBE6;
-    --agent-msg-color: #FFFFFF;
+    --user-msg-color: #f0eee6;
+    --agent-msg-color: #faf9f5;
     --border-color: #E6E2DE;
     --step-color: #F9F5F2;
     --tool-color: #F8F6F2;
@@ -17,9 +17,19 @@
     --shadow-color: rgba(0, 0, 0, 0.05);
     --header-color: #614C2F;
 }
+@font-face {
+  font-family: 'Merriweather';
+  src: url('../fonts/Merriweather-VariableFont_opsz,wdth,wght.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+textarea, button{
+    font-family: 'Merriweather', serif;
+}
 
 body {
-    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Merriweather', serif;
     max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
@@ -39,15 +49,21 @@ body {
     position: relative;
 }
 
+/* Find this CSS rule in index.css */
 .header.compact {
     margin-bottom: 40px;
     flex-direction: column;
     text-align: center;
-    margin-top: 200px;
+    margin-top: calc(25vh - 115px); /* Changed from 200px to 15% */
 }
 
-.header.compact h1 {
-    margin-bottom: 30px;
+/* You may also need to adjust the input container position
+   in relation to the header to ensure proper spacing */
+#input-container.centered {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 25%; /* This matches the JS changes we made */
 }
 
 h1 {
@@ -106,6 +122,18 @@ h3 {
     margin-bottom: 20px;
     box-shadow: 0 2px 8px var(--shadow-color);
     display: none;
+    animation: enter 0.5s ease;
+
+}
+@keyframes enter {
+    0%{
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    100%{
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .settings-grid {
@@ -278,12 +306,13 @@ h3 {
     font-size: 16px;
     transition: all 0.3s ease;
     height: 44px;
-    width: 82px;
+    width: 85px;
 
 }
 
 #send-button.tall {
-    height: 82px;
+    height: 85px;
+    width: 85px;
 }
 
 #send-button:hover {

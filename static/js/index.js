@@ -1,7 +1,7 @@
-// Make functions available in the global scope for inline onclick handlers
 function toggleSettings() {
     const settingsPanel = document.getElementById('settings-panel');
-    settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+    // Check for both 'none' and empty string (initial state)
+    settingsPanel.style.display = (settingsPanel.style.display === 'none' || settingsPanel.style.display === '') ? 'block' : 'none';
 }
 
 function saveAndApplySettings() {
@@ -17,6 +17,7 @@ function saveAndApplySettings() {
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+
     // Settings and UI elements
     const settingsBtn = document.getElementById('settings-btn');
     const settingsPanel = document.getElementById('settings-panel');
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputContainer = document.getElementById('input-container');
     // Track if the first message has been sent
     let firstMessageSent = false;
+
 
     // Initialize the UI
     setupInitialUI();
@@ -76,21 +78,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showMinimalUI() {
         console.log("Showing minimal UI");
-        flexContainer.classList.remove('visible');
-        statusBar.classList.remove('visible');
-        settingsBtn.classList.remove('visible');
-        header.classList.add('compact');
-        inputContainer.classList.add('centered');
+    flexContainer.classList.remove('visible');
+    statusBar.classList.remove('visible');
+    settingsBtn.classList.remove('visible');
+    header.classList.add('compact');
+    inputContainer.classList.add('centered');
 
-        // Make input and button taller
-        userInput.classList.add('tall');
-        sendButton.classList.add('tall');
+    // Make input and button taller
+    userInput.classList.add('tall');
+    sendButton.classList.add('tall');
 
-        // Position the input container appropriately below the header
-        const headerHeight = header.offsetHeight;
-        inputContainer.style.top = '325px';
+    // Position the input container at 25% from the top instead of fixed pixels
+    inputContainer.style.top = '25%';
 
-        firstMessageSent = false;
+    firstMessageSent = false;
     }
 
 function showFullUI() {
@@ -640,4 +641,149 @@ function sendMessage() {
             setTimeout(connectWebSocketSilent, reconnectDelay);
         }
     }
+// Add this function to index.js after the setupInitialUI function
+function resetToInitialState() {
+    console.log("Resetting to initial state");
+
+    // Clear chat container
+    chatContainer.innerHTML = '';
+
+    // Reset firstMessageSent flag
+    firstMessageSent = false;
+
+    // Reset localStorage data
+    const settings = {
+        serverHost: serverHostInput.value,
+        serverPort: parseInt(serverPortInput.value),
+        useSecure: useSecureInput.checked,
+        darkMode: darkModeToggle.checked,
+        chatHistory: []
+    };
+    localStorage.setItem('openManusSettings', JSON.stringify(settings));
+
+    // Force hide the flex container (chat and progress windows)
+    const flexContainer = document.querySelector('.flex-container');
+    flexContainer.classList.remove('visible');
+    flexContainer.style.display = 'none';
+    flexContainer.style.opacity = '0';
+    flexContainer.style.maxHeight = '0';
+    flexContainer.style.visibility = 'hidden';
+
+    // Force hide status bar
+    const statusBar = document.getElementById('status-bar');
+    statusBar.classList.remove('visible');
+    statusBar.style.opacity = '0';
+    statusBar.style.visibility = 'hidden';
+
+    // Force hide settings button
+    const settingsBtn = document.getElementById('settings-btn');
+    settingsBtn.classList.remove('visible');
+    settingsBtn.style.opacity = '0';
+
+    // Force hide settings panel if open
+    const settingsPanel = document.getElementById('settings-panel');
+    settingsPanel.style.display = 'none';
+
+    // Make header compact
+    const header = document.querySelector('.header');
+    header.classList.add('compact');
+
+    // Center input
+    const inputContainer = document.getElementById('input-container');
+    inputContainer.classList.add('centered');
+    inputContainer.classList.remove('force-normal');
+
+    // Make input and button taller
+    userInput.classList.add('tall');
+    sendButton.classList.add('tall');
+
+    // Position the input container appropriately
+    inputContainer.style.position = 'absolute';
+    inputContainer.style.top = '25%';
+    inputContainer.style.left = '50%';
+    inputContainer.style.transform = 'translateX(-50%)';
+
+    // Add a welcome message if connected (but don't count it toward history)
+    if (isConnected) {
+        // Wait a tiny bit for UI reset to complete
+        setTimeout(() => {
+            addMessage("Welcome to OpenManus! What can I help you with?", 'agent', false);
+        }, 100);
+    }
+
+    // Reset input if needed
+    userInput.value = '';
+
+    // Focus input
+    userInput.focus();
+
+    // Reset the send button completely - this is critical for it to work after reset
+    console.log("Completely rebuilding send button after reset");
+
+    // Get the original button
+    const originalButton = document.getElementById('send-button');
+
+    // Clone the button's parent (the input container)
+    const originalParent = originalButton.parentNode;
+
+    // Create a completely new button
+    const newButton = document.createElement('button');
+    newButton.id = 'send-button';
+    newButton.textContent = 'Send';
+    newButton.className = originalButton.className;
+    if (!newButton.classList.contains('tall')) {
+        newButton.classList.add('tall');
+    }
+
+    // Replace the old button with the new one
+    originalParent.replaceChild(newButton, originalButton);
+
+    // Add the special click handler that matches the one in the HTML script
+    newButton.addEventListener('click', function(event) {
+        console.log("Send button clicked after reset");
+
+        // Show the full UI - force transitions
+        const flexContainer = document.querySelector('.flex-container');
+        const statusBar = document.getElementById('status-bar');
+        const settingsBtn = document.getElementById('settings-btn');
+        const header = document.querySelector('.header');
+        const inputContainer = document.getElementById('input-container');
+
+        // Force display transitions
+        flexContainer.classList.add('visible');
+        flexContainer.style.opacity = '1';
+        flexContainer.style.maxHeight = '1000px';
+        flexContainer.style.visibility = 'visible';
+
+        statusBar.classList.add('visible');
+        settingsBtn.classList.add('visible');
+        header.classList.remove('compact');
+        inputContainer.classList.remove('centered');
+
+        // Now trigger the message sending
+        if (typeof window.sendMessage === 'function') {
+            window.sendMessage();
+        } else {
+            // Fallback if global function isn't accessible
+            const message = userInput.value.trim();
+            if (message) {
+                const chatContainer = document.getElementById('chat-container');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'user-message';
+                messageDiv.textContent = message;
+                chatContainer.appendChild(messageDiv);
+                userInput.value = '';
+            }
+        }
+    });
+
+    console.log("Reset complete, send button completely rebuilt");
+}
+
+// Add this code to the DOMContentLoaded event listener, after the line that loads settings
+// Set up title click event
+const titleElement = document.getElementById('title');
+if (titleElement) {
+    titleElement.addEventListener('click', resetToInitialState);
+}
 });
