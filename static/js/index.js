@@ -199,19 +199,29 @@ function showFullUI() {
         return settings;
     }
 
-    // Save settings to localStorage
-    function saveSettings() {
-        const settings = {
-            serverHost: serverHostInput.value,
-            serverPort: parseInt(serverPortInput.value),
-            useSecure: useSecureInput.checked,
-            darkMode: darkModeToggle.checked,
-            chatHistory: getChatHistory()
-        };
+// Add this to the initialization part of your file handler code
+// This ensures the file handler knows about the server settings
 
-        localStorage.setItem('openManusSettings', JSON.stringify(settings));
-        return settings;
-    }
+
+
+// Modify the saveSettings function to dispatch an event when settings change
+function saveSettings() {
+    const settings = {
+        serverHost: serverHostInput.value,
+        serverPort: parseInt(serverPortInput.value),
+        useSecure: useSecureInput.checked,
+        darkMode: darkModeToggle.checked,
+        chatHistory: getChatHistory()
+    };
+
+    localStorage.setItem('openManusSettings', JSON.stringify(settings));
+
+    // Dispatch an event to notify components that settings changed
+    const event = new CustomEvent('settings-updated', { detail: settings });
+    document.dispatchEvent(event);
+
+    return settings;
+}
 
     // Get current chat history
     function getChatHistory() {
@@ -279,7 +289,8 @@ function showFullUI() {
 
             socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-
+                // Forward file-related messages to the file handler
+                window.fileHandler.handleMessage(data);
                 switch(data.status) {
                     case 'processing':
                         statusDisplay.textContent = 'Processing request...';
@@ -546,65 +557,66 @@ function sendMessage() {
             };
 
             socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
+    const data = JSON.parse(event.data);
 
-                switch(data.status) {
-                    case 'processing':
-                        statusDisplay.textContent = 'Processing request...';
-                        isProcessing = true;
-                        showTypingIndicator();
-                        addProgressEntry(data.message || 'Processing started', 'step');
-                        break;
+    // Forward file-related messages to the file handler
+    window.fileHandler.handleMessage(data);
 
-                    case 'step':
-                        addProgressEntry(data.message || 'Executing step', 'step');
-                        break;
-
-                    case 'thinking':
-                        addProgressEntry(data.message || 'Thinking about next steps', 'thinking');
-                        break;
-
-                    case 'tool':
-                        addProgressEntry(data.message || 'Using a tool', 'tool');
-                        break;
-
-                    case 'tool_result':
-                        addProgressEntry(data.message || 'Tool returned a result', 'tool-result');
-                        break;
-
-                    case 'complete':
-                        hideTypingIndicator();
-                        isProcessing = false;
-                        statusDisplay.textContent = 'Connected';
-                        addProgressEntry('Processing complete', 'step');
-
-                        if (data.messages && data.messages.length > 0) {
-                            for (const msg of data.messages) {
-                                if (msg.role === 'assistant') {
-                                    addMessage(msg.content || "No content", 'agent');
-                                }
-                            }
-                        } else {
-                            // Fallback to result if no messages
-                            addMessage(data.result, 'agent');
-                        }
-                        // Save updated chat history
-                        saveSettings();
-                        break;
-
-                    case 'error':
-                        hideTypingIndicator();
-                        isProcessing = false;
-                        statusDisplay.textContent = 'Error: ' + data.error;
-                        addProgressEntry('Error: ' + data.error, 'error');
-                        addMessage(`Error: ${data.error}`, 'agent');
-                        saveSettings();
-                        break;
-
-                    default:
-                        console.log('Unknown message type:', data);
+    switch(data.status) {
+        case 'processing':
+            // Handle processing status
+            statusDisplay.textContent = 'Processing request...';
+            isProcessing = true;
+            showTypingIndicator();
+            addProgressEntry(data.message || 'Processing started', 'step');
+            break;
+        case 'step':
+            addProgressEntry(data.message || 'Executing step', 'step');
+            break;
+        case 'thinking':
+            addProgressEntry(data.message || 'Thinking about next steps', 'thinking');
+            break;
+        case 'tool':
+            addProgressEntry(data.message || 'Using a tool', 'tool');
+            break;
+        case 'tool_result':
+            addProgressEntry(data.message || 'Tool returned a result', 'tool-result');
+            break;
+        case 'complete':
+            hideTypingIndicator();
+            isProcessing = false;
+            statusDisplay.textContent = 'Connected';
+            addProgressEntry('Processing complete', 'step');
+            if (data.messages && data.messages.length > 0) {
+                for (const msg of data.messages) {
+                    if (msg.role === 'assistant') {
+                        addMessage(msg.content || "No content", 'agent');
+                    }
                 }
-            };
+            } else {
+                addMessage(data.result, 'agent');
+            }
+            // Save updated chat history
+            saveSettings();
+            break;
+        case 'error':
+            hideTypingIndicator();
+            isProcessing = false;
+            statusDisplay.textContent = 'Error: ' + data.error;
+            addProgressEntry('Error: ' + data.error, 'error');
+            addMessage(`Error: ${data.error}`, 'agent');
+            saveSettings();
+            break;
+        case 'file_created':
+            // Optionally handle file_created specifically here
+            console.log("File created message received:", data);
+            // The fileHandler.handleMessage call above should already update the UI.
+            break;
+        default:
+            console.log('Unknown message type:', data);
+    }
+};
+
 
             socket.onclose = function(event) {
                 isConnected = false;
@@ -786,4 +798,407 @@ const titleElement = document.getElementById('title');
 if (titleElement) {
     titleElement.addEventListener('click', resetToInitialState);
 }
+});
+
+// client/js/file-handler.js
+
+// File handling section
+let generatedFiles = []; // Store file information
+
+// Initialize file display container by loading the HTML template
+function initializeFileSection() {
+    // Create the files container if it doesn't exist
+    if (!document.getElementById('files-container')) {
+        const flexContainer = document.querySelector('.flex-container');
+
+        // Load and inject the files section HTML
+        fetch('client/files-section.html')
+            .then(response => response.text())
+            .then(html => {
+                // Insert the HTML after the flex container
+                flexContainer.insertAdjacentHTML('afterend', html);
+
+                // Make sure the CSS is loaded
+                if (!document.querySelector('link[href="client/css/files.css"]')) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = 'client/css/files.css';
+                    document.head.appendChild(link);
+                }
+
+                // If there are any files, update the display
+                if (generatedFiles.length > 0) {
+                    updateFilesDisplay();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading files section template:', error);
+                // Fallback: Create a basic container if template loading fails
+                const filesContainer = document.createElement('div');
+                filesContainer.id = 'files-container';
+                filesContainer.className = 'files-section';
+                filesContainer.innerHTML = `
+                    <h3>Generated Files</h3>
+                    <div id="files-list" class="files-list">
+                        <div class="no-files">No files generated yet</div>
+                    </div>
+                `;
+                flexContainer.parentNode.insertBefore(filesContainer, flexContainer.nextSibling);
+            });
+    }
+}
+
+// Update the handleWebSocketMessage function to process file messages
+function handleWebSocketMessage(data) {
+    // Handle files in 'complete' status
+    if (data.status === 'complete' && data.files && data.files.length > 0) {
+        updateFilesList(data.files);
+    }
+
+    // Handle file_created status
+    if (data.status === 'file_created' && data.file) {
+        addFile(data.file);
+    }
+}
+
+// Add a single file to the list
+function addFile(fileInfo) {
+    // Check if we already have this file
+    if (!generatedFiles.some(f => f.file_id === fileInfo.file_id)) {
+        generatedFiles.push(fileInfo);
+        updateFilesDisplay();
+    }
+}
+
+// Update with multiple files
+function updateFilesList(files) {
+    // Add new files that aren't already in the list
+    for (const file of files) {
+        if (!generatedFiles.some(f => f.file_id === file.file_id)) {
+            generatedFiles.push(file);
+        }
+    }
+    updateFilesDisplay();
+}
+
+// Add this function to index.js, right after the updateFilesDisplay function
+// This will handle downloads with better browser compatibility
+
+function downloadFile(fileId, fileName) {
+    // Get the base URL from the current location
+    const baseURL = window.location.origin;
+    const url = `${baseURL}/api/files/${fileId}`;
+
+    // Create a temporary anchor element
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName; // This sets the downloaded file name
+    a.target = '_blank'; // Open in new tab as fallback
+
+    // Append to document, click, then remove
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// Then modify the updateFilesDisplay function to use this new approach
+// Replace the fileItem.innerHTML section with this:
+
+// Modified updateFilesDisplay function with a simpler, more reliable download approach
+// Add this as a replacement for the current updateFilesDisplay function
+
+// Modified updateFilesDisplay function that fixes the URL port issue
+// This ensures downloads go to the correct server port
+
+function updateFilesDisplay() {
+    // Make sure the file section exists
+    initializeFileSection();
+
+    const filesContainer = document.getElementById('files-container');
+    const filesList = document.getElementById('files-list');
+    if (!filesList) {
+        console.warn('Files list element not found, waiting for initialization...');
+        // The container might still be loading, retry in a moment
+        setTimeout(updateFilesDisplay, 100);
+        return;
+    }
+
+    if (generatedFiles.length === 0) {
+        filesList.innerHTML = '<div class="no-files">No files generated yet</div>';
+        filesContainer.style.display = 'none';
+        return;
+    }
+
+    // Show the container when we have files
+    filesContainer.style.display = 'block';
+    filesList.innerHTML = '';
+
+    for (const file of generatedFiles) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+
+        // Get file icon based on content type
+        let iconClass = '📄'; // Default document icon
+        if (file.content_type) {
+            if (file.content_type.startsWith('image/')) iconClass = '🖼️';
+            else if (file.content_type.startsWith('text/')) iconClass = '📝';
+            else if (file.content_type.startsWith('audio/')) iconClass = '🔊';
+            else if (file.content_type.startsWith('video/')) iconClass = '🎬';
+            else if (file.content_type.includes('pdf')) iconClass = '📑';
+            else if (file.content_type.includes('zip') || file.content_type.includes('compressed')) iconClass = '📦';
+            else if (file.content_type.includes('excel') || file.content_type.includes('spreadsheet')) iconClass = '📊';
+        }
+
+        // Format the file size
+        let sizeText = '';
+        if (file.size) {
+            if (file.size < 1024) sizeText = `${file.size} bytes`;
+            else if (file.size < 1024 * 1024) sizeText = `${(file.size / 1024).toFixed(1)} KB`;
+            else sizeText = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        // Create the file info HTML
+        const fileIconDiv = document.createElement('div');
+        fileIconDiv.className = 'file-icon';
+        fileIconDiv.textContent = iconClass;
+
+        const fileNameDiv = document.createElement('div');
+        fileNameDiv.className = 'file-name';
+        fileNameDiv.textContent = file.file_name;
+
+        const fileMetaDiv = document.createElement('div');
+        fileMetaDiv.className = 'file-meta';
+        fileMetaDiv.textContent = sizeText;
+
+        const fileInfoDiv = document.createElement('div');
+        fileInfoDiv.className = 'file-info';
+        fileInfoDiv.appendChild(fileNameDiv);
+        fileInfoDiv.appendChild(fileMetaDiv);
+
+        // Create a direct download link with corrected URL
+        const downloadLink = document.createElement('a');
+        downloadLink.className = 'file-download';
+        downloadLink.textContent = 'Download';
+
+        // IMPORTANT FIX: Convert relative URL to absolute URL pointing to port 2000
+        // Extract the file ID from the download_url
+        const fileIdMatch = file.download_url.match(/\/api\/files\/([^\/]+)$/);
+        if (fileIdMatch && fileIdMatch[1]) {
+            const fileId = fileIdMatch[1];
+            // Use the correct server address and port
+            downloadLink.href = `http://localhost:2000/api/files/${fileId}`;
+        } else {
+            // Fallback to the original URL if parsing fails
+            downloadLink.href = file.download_url;
+        }
+
+        downloadLink.target = '_blank'; // Open in new tab
+        downloadLink.setAttribute('download', file.file_name);
+
+        // Show full URL in tooltip to help users
+        downloadLink.title = `Download ${file.file_name}`;
+
+        // Add all elements to the file item
+        fileItem.appendChild(fileIconDiv);
+        fileItem.appendChild(fileInfoDiv);
+        fileItem.appendChild(downloadLink);
+
+        // Add a direct copy link button
+        const copyLinkBtn = document.createElement('button');
+        copyLinkBtn.className = 'file-copy-link';
+        copyLinkBtn.textContent = 'Copy URL';
+        copyLinkBtn.onclick = function() {
+            // Use the same correctly formed URL
+            const fileIdMatch = file.download_url.match(/\/api\/files\/([^\/]+)$/);
+            if (fileIdMatch && fileIdMatch[1]) {
+                const fileId = fileIdMatch[1];
+                const fullUrl = `http://localhost:2000/api/files/${fileId}`;
+                navigator.clipboard.writeText(fullUrl).then(
+                    function() {
+                        copyLinkBtn.textContent = 'Copied!';
+                        setTimeout(() => { copyLinkBtn.textContent = 'Copy URL'; }, 2000);
+                    },
+                    function() {
+                        // Fallback for clipboard API not available
+                        prompt('Copy this download link:', fullUrl);
+                    }
+                );
+            }
+        };
+
+        fileItem.appendChild(copyLinkBtn);
+        filesList.appendChild(fileItem);
+    }
+}
+
+// Use settings to correctly build file URLs
+function getCorrectFileUrl(fileId) {
+    // Get server settings from localStorage
+    const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {
+        serverHost: 'localhost',
+        serverPort: 2000,
+        useSecure: false
+    };
+
+    // Build the correct URL using the settings
+    const protocol = settings.useSecure ? 'https://' : 'http://';
+    return `${protocol}${settings.serverHost}:${settings.serverPort}/api/files/${fileId}`;
+}
+
+// Add a context menu for files to give more options
+function addFileContextMenu() {
+    document.addEventListener('contextmenu', function(e) {
+        // Check if clicked element is a file item or its child
+        let target = e.target;
+        let fileItem = null;
+
+        // Find the file-item parent if any
+        while (target && target !== document) {
+            if (target.classList.contains('file-item')) {
+                fileItem = target;
+                break;
+            }
+            target = target.parentNode;
+        }
+
+        // If we found a file item, handle the context menu
+        if (fileItem) {
+            e.preventDefault();
+
+            // Find the file ID from data attributes or by searching the generatedFiles array
+            const fileName = fileItem.querySelector('.file-name').textContent;
+            const file = generatedFiles.find(f => f.file_name === fileName);
+
+            if (file) {
+                // Create a simple context menu
+                const menu = document.createElement('div');
+                menu.className = 'file-context-menu';
+                menu.style.position = 'absolute';
+                menu.style.left = e.pageX + 'px';
+                menu.style.top = e.pageY + 'px';
+                menu.style.background = 'white';
+                menu.style.border = '1px solid #ccc';
+                menu.style.padding = '5px';
+                menu.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.2)';
+                menu.style.zIndex = '1000';
+
+                // Add menu items
+                const openItem = document.createElement('div');
+                openItem.textContent = 'Open in new tab';
+                openItem.style.padding = '5px 10px';
+                openItem.style.cursor = 'pointer';
+                openItem.onclick = function() {
+                    window.open(file.download_url, '_blank');
+                    document.body.removeChild(menu);
+                };
+
+                const copyItem = document.createElement('div');
+                copyItem.textContent = 'Copy download link';
+                copyItem.style.padding = '5px 10px';
+                copyItem.style.cursor = 'pointer';
+                copyItem.onclick = function() {
+                    copyDownloadLink(file.file_id);
+                    document.body.removeChild(menu);
+                };
+
+                menu.appendChild(openItem);
+                menu.appendChild(copyItem);
+                document.body.appendChild(menu);
+
+                // Remove menu when clicking elsewhere
+                document.addEventListener('click', function removeMenu() {
+                    if (menu.parentNode) {
+                        document.body.removeChild(menu);
+                    }
+                    document.removeEventListener('click', removeMenu);
+                });
+            }
+        }
+    });
+}
+// Clear files when clearing chat
+function clearFiles() {
+    generatedFiles = [];
+    const filesContainer = document.getElementById('files-container');
+    const filesList = document.getElementById('files-list');
+
+    if (filesList) {
+        filesList.innerHTML = '<div class="no-files">No files generated yet</div>';
+    }
+
+    if (filesContainer) {
+        filesContainer.style.display = 'none';
+    }
+}
+
+// Add a button to clear files
+function addClearFilesButton() {
+    const statusBar = document.getElementById('status-bar');
+    if (!statusBar) return;
+
+    const buttonsContainer = statusBar.querySelector('.buttons-container');
+    if (!buttonsContainer) return;
+
+    // Add the clear files button if it doesn't exist
+    if (!document.getElementById('clear-files')) {
+        const clearFilesBtn = document.createElement('button');
+        clearFilesBtn.id = 'clear-files';
+        clearFilesBtn.textContent = 'Clear Files';
+        clearFilesBtn.addEventListener('click', clearFiles);
+        buttonsContainer.appendChild(clearFilesBtn);
+    }
+}
+
+window.fileHandler = {
+    initialize: function() {
+        initializeFileSection();
+        addClearFilesButton();
+
+        // Update downloadLinks when settings change
+        document.addEventListener('settings-updated', function() {
+            updateFilesDisplay();
+        });
+    },
+    handleMessage: handleWebSocketMessage,
+    clearFiles: clearFiles,
+    addFile: addFile,
+    getSettings: function() {
+        return JSON.parse(localStorage.getItem('openManusSettings')) || {
+            serverHost: 'localhost',
+            serverPort: 2000,
+            useSecure: false
+        };
+    }
+};
+
+
+// Add to the document ready event
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize file handling
+    window.fileHandler.initialize();
+
+    // Add file handling to clear chat button
+    const clearChatBtn = document.getElementById('clear-chat');
+    if (clearChatBtn) {
+        // Save the original click handler
+        const originalClickHandler = clearChatBtn.onclick;
+        clearChatBtn.onclick = function(e) {
+            // Call original handler if it exists
+            if (originalClickHandler) originalClickHandler.call(this, e);
+            // Then clear files
+            clearFiles();
+        };
+    }
+
+    // To integrate with your WebSocket handling, add this to your WebSocket message handler:
+    /*
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        // Handle file messages
+        window.fileHandler.handleMessage(data);
+
+        // Your existing WebSocket message handling...
+    };
+    */
 });

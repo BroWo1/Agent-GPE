@@ -128,7 +128,7 @@ h3 {
 @keyframes enter {
     0%{
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(-100px);
     }
     100%{
         opacity: 1;
@@ -522,4 +522,96 @@ body.dark-mode code {
 
 #title{
     cursor: pointer;
+}
+
+/* Styles for the files section */
+.files-section {
+    margin-top: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    background-color: var(--card-color);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    display: none; /* Hidden by default, shown when files are available */
+}
+
+.files-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.file-item {
+    padding: 10px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-color);
+    display: flex;
+    align-items: center;
+    min-width: 200px;
+    transition: background-color 0.2s;
+}
+
+.file-item:hover {
+    background-color: var(--hover-color);
+}
+
+.file-icon {
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+.file-info {
+    flex-grow: 1;
+}
+
+.file-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.file-meta {
+    font-size: 12px;
+    color: #777;
+}
+
+.file-download {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.file-download:hover {
+    background-color: var(--primary-dark);
+}
+
+.no-files {
+    color: #777;
+    font-style: italic;
+}
+
+/* Dark mode compatibility */
+body.dark-mode .file-meta {
+    color: #aaa;
+}
+
+body.dark-mode .no-files {
+    color: #aaa;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .files-list {
+        flex-direction: column;
+    }
+
+    .file-item {
+        width: 100%;
+    }
 }
