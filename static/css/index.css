@@ -491,3 +491,6 @@ body.dark-mode code {
     }
 }
 
+#title{
+    cursor: pointer;
+}

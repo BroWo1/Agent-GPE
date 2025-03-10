@@ -10,7 +10,7 @@
 </head>
 <body>
     <div class="header compact">
-        <h1>Agent GPE</h1>
+        <h1 id="title">Agent GPE</h1>
         <button id="settings-btn" onclick="toggleSettings()">⚙️ Settings</button>
     </div>
 
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("Running button fix script");
     const sendButton = document.getElementById('send-button');
     const userInput = document.getElementById('user-input');
-
+    
     if (sendButton) {
         // Remove any existing onclick attribute
         sendButton.removeAttribute('onclick');

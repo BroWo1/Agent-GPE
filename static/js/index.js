@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusBar = document.getElementById('status-bar');
     const header = document.querySelector('.header');
     const inputContainer = document.getElementById('input-container');
-
     // Track if the first message has been sent
     let firstMessageSent = false;
 
