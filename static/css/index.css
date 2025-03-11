@@ -24,6 +24,12 @@
   font-style: normal;
 }
 
+input:focus,
+textarea:focus,
+button:focus {
+    outline: none;
+}
+
 textarea, button{
     font-family: 'Merriweather', serif;
 }
@@ -162,6 +168,19 @@ h3 {
     overflow: visible;
     visibility: visible;
     margin-top: 0;
+    animation: enterContainer 0.5s ease;
+}
+
+@keyframes enterContainer {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
 }
 
 /* Ensure forceful display */
@@ -348,7 +367,7 @@ h3 {
     gap: 12px;
 }
 
-#clear-chat, #clear-progress {
+#clear-chat, #clear-progress, #clear-files {
     background-color: transparent;
     border: 1px solid var(--border-color);
     border-radius: 20px;
@@ -358,7 +377,7 @@ h3 {
     font-size: 14px;
 }
 
-#clear-chat:hover, #clear-progress:hover {
+#clear-chat:hover, #clear-progress:hover, #clear-files:hover {
     background-color: var(--button-hover);
 }
 

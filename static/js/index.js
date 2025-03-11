@@ -509,7 +509,13 @@ function sendMessage() {
         addProgressEntry('Progress log cleared', 'step');
     });
 
-    sendButton.addEventListener('click', sendMessage);
+    sendButton.addEventListener('click', ()=>{
+        const message = userInput.value.trim();
+        if(message.length !== 0){
+            sendMessage();
+        }
+
+    });
 
     userInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
