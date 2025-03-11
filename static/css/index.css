@@ -896,3 +896,14 @@ h1#title.glowing::after {
 }
 
 
+.animate-fade-out {
+  animation: fadeOut 0.5s ease forwards;
+}
+
+.animate-collapse {
+  animation: collapseHeight 0.5s ease forwards;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
