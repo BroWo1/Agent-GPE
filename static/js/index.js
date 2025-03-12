@@ -14,6 +14,33 @@ function saveAndApplySettings() {
     }
     connectWebSocket();
 }
+document.head.insertAdjacentHTML('beforeend', `
+  <style>
+    #cancel-button {
+      padding: 12px 20px;
+      background-color: #E57373;
+      color: white;
+      border: none;
+      border-radius: 24px;
+      margin-left: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      display: none;
+      z-index: 1000;
+    }
+    
+    #cancel-button:hover {
+      background-color: #D32F2F;
+    }
+    
+    /* Make extra sure the button is visible when needed */
+    #cancel-button[style*="display: block"],
+    #cancel-button[style*="display:block"] {
+      display: block !important;
+    }
+  </style>
+`);
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -39,27 +66,177 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputContainer = document.getElementById('input-container');
     // Track if the first message has been sent
     let firstMessageSent = false;
+    console.log("DOM loaded - checking cancel button setup");
+    const checkCancelButton = () => {
+      const btn = document.getElementById('cancel-button');
+      console.log("Cancel button exists:", !!btn);
+      if (btn) {
+        console.log("Cancel button display:", btn.style.display);
+        console.log("Cancel button parent:", btn.parentElement?.tagName);
+        console.log("Cancel button CSS:", btn.className);
+      }
+    };
+    const cancelButton = document.createElement('button');
+    cancelButton.id = 'cancel-button';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.display = 'none'; // Initially hidden
+    cancelButton.classList.add('cancel-btn');
+    cancelButton.style.zIndex = '1000'; // Ensure it's above other elementsf
+
+    // Before appending, check if it already exists
+    if (!document.getElementById('cancel-button')) {
+      console.log("Appending cancel button to input container");
+      inputContainer.appendChild(cancelButton);
+    } else {
+      console.log("Cancel button already exists!");
+    }
+
+    // Call our debug function after creating button
+    setTimeout(checkCancelButton, 500);
+    // Add this code right after creating the cancel button in the DOMContentLoaded event
+// (below the line that adds the button to the inputContainer)
+
+// Add event listener to the cancel button
+cancelButton.addEventListener('click', function() {
+  console.log("Cancel button clicked");
+
+  // Only send cancellation if we're actually connected and processing
+  if (isConnected && isProcessing) {
+    console.log("Sending cancellation request to server");
+
+    // Send cancellation request to server
+    socket.send(JSON.stringify({
+      command: "cancel",
+      clientId: clientId
+    }));
+
+    // Update status to give immediate feedback
+    statusDisplay.textContent = 'Cancellation requested...';
+
+    // Also add to progress log
+    addProgressEntry('Cancellation requested by user', 'step');
+  } else {
+    console.log("Cannot cancel - not connected or not processing",
+                "isConnected:", isConnected,
+                "isProcessing:", isProcessing);
+  }
+});
 
 
     // Initialize the UI
     setupInitialUI();
     function checkConnectionStatus() {
-    console.log("---- WebSocket Diagnostic ----");
-    console.log("isConnected:", isConnected);
-    console.log("Socket state:", socket ? ["CONNECTING", "OPEN", "CLOSING", "CLOSED"][socket.readyState] : "No socket");
-    console.log("clientId:", clientId);
-    console.log("firstMessageSent:", firstMessageSent);
-    console.log("isProcessing:", isProcessing);
+        console.log("---- WebSocket Diagnostic ----");
+        console.log("isConnected:", isConnected);
+        console.log("Socket state:", socket ? ["CONNECTING", "OPEN", "CLOSING", "CLOSED"][socket.readyState] : "No socket");
+        console.log("clientId:", clientId);
+        console.log("firstMessageSent:", firstMessageSent);
+        console.log("isProcessing:", isProcessing);
 
-    // Check server settings
-    const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {};
-    console.log("Server settings:", settings);
+        // Check server settings
+        const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {};
+        console.log("Server settings:", settings);
 
-    // Try to reconnect if needed
-    if (!isConnected && socket && socket.readyState !== WebSocket.CONNECTING) {
-        console.log("Attempting reconnection...");
-        connectWebSocket();
+        // Try to reconnect if needed
+        if (!isConnected && socket && socket.readyState !== WebSocket.CONNECTING) {
+            console.log("Attempting reconnection...");
+            connectWebSocket();
+        }
     }
+    function handleWebSocketMessage(event) {
+  try {
+    const data = JSON.parse(event.data);
+    console.log("WebSocket message received:", data.status);
+
+    // Forward file-related messages to the file handler
+    if (window.fileHandler) {
+      window.fileHandler.handleMessage(data);
+    }
+
+    // IMPORTANT: Get cancel button directly at the time of handling the event
+    const cancelBtn = document.getElementById('cancel-button');
+    console.log("Processing WebSocket message. Cancel button found:", !!cancelBtn);
+
+    switch(data.status) {
+      case 'processing':
+        statusDisplay.textContent = 'Processing request...';
+        isProcessing = true;
+        showTypingIndicator();
+        addProgressEntry(data.message || 'Processing started', 'step');
+
+        // Show cancel button when processing starts
+        if (cancelBtn) {
+          console.log("Setting cancel button to visible");
+          cancelBtn.style.display = 'block';
+          // Force a reflow to ensure the browser updates the visibility
+          void cancelBtn.offsetHeight;
+        } else {
+          console.error("Cancel button not found during processing!");
+        }
+        break;
+
+      case 'complete':
+      case 'cancelled':
+      case 'error':
+        hideTypingIndicator();
+        isProcessing = false;
+
+        if (data.status === 'complete') {
+          statusDisplay.textContent = 'Connected';
+          addProgressEntry('Processing complete', 'step');
+          // Handle messages
+          if (data.messages && data.messages.length > 0) {
+            for (const msg of data.messages) {
+              if (msg.role === 'assistant') {
+                addMessage(msg.content || "No content", 'agent');
+              }
+            }
+          } else {
+            addMessage(data.result || "Task completed", 'agent');
+          }
+        } else if (data.status === 'cancelled') {
+          statusDisplay.textContent = 'Cancelled';
+          addProgressEntry(data.message || 'Processing cancelled', 'step');
+          addMessage("Processing was cancelled.", 'agent');
+        } else { // error
+          statusDisplay.textContent = 'Error: ' + data.error;
+          addProgressEntry('Error: ' + data.error, 'error');
+          addMessage(`Error: ${data.error}`, 'agent');
+        }
+
+        // Hide cancel button
+        if (cancelBtn) {
+          console.log("Hiding cancel button");
+          cancelBtn.style.display = 'none';
+        }
+
+        // Save updated chat history
+        saveSettings();
+        break;
+
+      // Handle other cases
+      case 'step':
+        addProgressEntry(data.message || 'Executing step', 'step');
+        break;
+      case 'thinking':
+        addProgressEntry(data.message || 'Thinking about next steps', 'thinking');
+        break;
+      case 'tool':
+        addProgressEntry(data.message || 'Using a tool', 'tool');
+        break;
+      case 'tool_result':
+        addProgressEntry(data.message || 'Tool returned a result', 'tool-result');
+        break;
+      case 'cancelling':
+        statusDisplay.textContent = 'Cancelling...';
+        addProgressEntry(data.message || 'Cancelling processing', 'step');
+        break;
+      default:
+        console.log('Unknown message type:', data);
+    }
+  } catch (error) {
+    console.error("Error handling WebSocket message:", error);
+  }
 }
 
 // Expose the diagnostic function globally
@@ -256,7 +433,8 @@ function showMinimalUI() {
 
 // Simplified resetToInitialState function
 function resetToInitialState() {
-  console.log("Resetting to initial state");
+  if(firstMessageSent){
+      console.log("Resetting to initial state");
 
   // Clear chat container
   const chatContainer = document.getElementById('chat-container');
@@ -284,6 +462,7 @@ function resetToInitialState() {
   const userInput = document.getElementById('user-input');
   userInput.value = '';
   userInput.focus();
+  }
 }
 
 // Simplified function to add messages with clean animation
@@ -449,67 +628,7 @@ function saveSettings() {
                 addProgressEntry('Connected to server', 'step');
             };
 
-            socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                // Forward file-related messages to the file handler
-                window.fileHandler.handleMessage(data);
-                switch(data.status) {
-                    case 'processing':
-                        statusDisplay.textContent = 'Processing request...';
-                        isProcessing = true;
-                        showTypingIndicator();
-                        addProgressEntry(data.message || 'Processing started', 'step');
-                        break;
-
-                    case 'step':
-                        addProgressEntry(data.message || 'Executing step', 'step');
-                        break;
-
-                    case 'thinking':
-                        addProgressEntry(data.message || 'Thinking about next steps', 'thinking');
-                        break;
-
-                    case 'tool':
-                        addProgressEntry(data.message || 'Using a tool', 'tool');
-                        break;
-
-                    case 'tool_result':
-                        addProgressEntry(data.message || 'Tool returned a result', 'tool-result');
-                        break;
-
-                    case 'complete':
-                        hideTypingIndicator();
-                        isProcessing = false;
-                        statusDisplay.textContent = 'Connected';
-                        addProgressEntry('Processing complete', 'step');
-
-                        if (data.messages && data.messages.length > 0) {
-                            for (const msg of data.messages) {
-                                if (msg.role === 'assistant') {
-                                    addMessage(msg.content || "No content", 'agent');
-                                }
-                            }
-                        } else {
-                            // Fallback to result if no messages
-                            addMessage(data.result, 'agent');
-                        }
-                        // Save updated chat history
-                        saveSettings();
-                        break;
-
-                    case 'error':
-                        hideTypingIndicator();
-                        isProcessing = false;
-                        statusDisplay.textContent = 'Error: ' + data.error;
-                        addProgressEntry('Error: ' + data.error, 'error');
-                        addMessage(`Error: ${data.error}`, 'agent');
-                        saveSettings();
-                        break;
-
-                    default:
-                        console.log('Unknown message type:', data);
-                }
-            };
+socket.onmessage = handleWebSocketMessage;
 
             socket.onclose = function(event) {
                 isConnected = false;
@@ -691,7 +810,15 @@ function sendMessage() {
     // Expose functions to global scope
     window.saveSettings = saveSettings;
     window.connectWebSocket = connectWebSocket;
-    window.sendMessage = sendMessage;
+    const originalSendMessage = sendMessage;
+    window.sendMessage = function() {
+        if (isProcessing) {
+            alert("Currently processing a request. Please wait or cancel the current processing.");
+            return;
+        }
+
+        originalSendMessage();
+    };
 
     // Initialize connection but don't add welcome message
     connectWebSocketSilent();
@@ -724,66 +851,7 @@ function sendMessage() {
                 console.log('Connected to server');
             };
 
-            socket.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-
-    // Forward file-related messages to the file handler
-    window.fileHandler.handleMessage(data);
-
-    switch(data.status) {
-        case 'processing':
-            // Handle processing status
-            statusDisplay.textContent = 'Processing request...';
-            isProcessing = true;
-            showTypingIndicator();
-            addProgressEntry(data.message || 'Processing started', 'step');
-            break;
-        case 'step':
-            addProgressEntry(data.message || 'Executing step', 'step');
-            break;
-        case 'thinking':
-            addProgressEntry(data.message || 'Thinking about next steps', 'thinking');
-            break;
-        case 'tool':
-            addProgressEntry(data.message || 'Using a tool', 'tool');
-            break;
-        case 'tool_result':
-            addProgressEntry(data.message || 'Tool returned a result', 'tool-result');
-            break;
-        case 'complete':
-            hideTypingIndicator();
-            isProcessing = false;
-            statusDisplay.textContent = 'Connected';
-            addProgressEntry('Processing complete', 'step');
-            if (data.messages && data.messages.length > 0) {
-                for (const msg of data.messages) {
-                    if (msg.role === 'assistant') {
-                        addMessage(msg.content || "No content", 'agent');
-                    }
-                }
-            } else {
-                addMessage(data.result, 'agent');
-            }
-            // Save updated chat history
-            saveSettings();
-            break;
-        case 'error':
-            hideTypingIndicator();
-            isProcessing = false;
-            statusDisplay.textContent = 'Error: ' + data.error;
-            addProgressEntry('Error: ' + data.error, 'error');
-            addMessage(`Error: ${data.error}`, 'agent');
-            saveSettings();
-            break;
-        case 'file_created':
-            // Optionally handle file_created specifically here
-            console.log("File created message received:", data);
-            // The fileHandler.handleMessage call above should already update the UI.
-            break;
-        default:
-            console.log('Unknown message type:', data);
-    }
-};
+           socket.onmessage = handleWebSocketMessage;
 
 
             socket.onclose = function(event) {
@@ -877,18 +945,6 @@ function initializeFileSection() {
     }
 }
 
-// Update the handleWebSocketMessage function to process file messages
-function handleWebSocketMessage(data) {
-    // Handle files in 'complete' status
-    if (data.status === 'complete' && data.files && data.files.length > 0) {
-        updateFilesList(data.files);
-    }
-
-    // Handle file_created status
-    if (data.status === 'file_created' && data.file) {
-        addFile(data.file);
-    }
-}
 
 // Add a single file to the list
 function addFile(fileInfo) {
@@ -1231,3 +1287,20 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     */
 });
+
+setTimeout(() => {
+  const testBtn = document.createElement('button');
+  testBtn.textContent = 'Test Cancel Button';
+  testBtn.style.marginTop = '10px';
+  document.body.appendChild(testBtn);
+
+  testBtn.addEventListener('click', () => {
+    const cancelBtn = document.getElementById('cancel-button');
+    if (cancelBtn) {
+      cancelBtn.style.display = cancelBtn.style.display === 'none' ? 'block' : 'none';
+      console.log('Toggled cancel button to:', cancelBtn.style.display);
+    } else {
+      console.error('Cancel button not found!');
+    }
+  });
+}, 1000);

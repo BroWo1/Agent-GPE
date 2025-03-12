@@ -717,3 +717,31 @@ body.dark-mode .no-files {
 .typing-indicator span:nth-child(3) {
   animation-delay: 0.4s;
 }
+
+/* Add this to index.css */
+.cancel-btn {
+    padding: 12px 20px;
+    background-color: #E57373;  /* Light red color */
+    color: white;
+    border: none;
+    border-radius: 24px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+    background-color: #D32F2F;  /* Darker red on hover */
+}
+
+/* Add a pulsing animation for the cancel button during processing */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+#cancel-button {
+    animation: pulse 2s infinite ease-in-out;
+}
