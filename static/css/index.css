@@ -55,21 +55,11 @@ body {
     position: relative;
 }
 
-/* Find this CSS rule in index.css */
 .header.compact {
     margin-bottom: 40px;
     flex-direction: column;
     text-align: center;
-    margin-top: calc(25vh - 115px); /* Changed from 200px to 15% */
-}
-
-/* You may also need to adjust the input container position
-   in relation to the header to ensure proper spacing */
-#input-container.centered {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 25%; /* This matches the JS changes we made */
+    margin-top: calc(25vh - 115px);
 }
 
 h1 {
@@ -129,8 +119,8 @@ h3 {
     box-shadow: 0 2px 8px var(--shadow-color);
     display: none;
     animation: enter 0.5s ease;
-
 }
+
 @keyframes enter {
     0%{
         opacity: 0;
@@ -149,7 +139,6 @@ h3 {
     align-items: center;
 }
 
-/* Add this to your CSS to ensure transitions work properly */
 .flex-container {
     display: flex;
     gap: 20px;
@@ -164,7 +153,7 @@ h3 {
 
 .flex-container.visible {
     opacity: 1;
-    max-height: 1000px; /* Ensure this is tall enough */
+    max-height: 1000px;
     overflow: visible;
     visibility: visible;
     margin-top: 0;
@@ -180,10 +169,8 @@ h3 {
         opacity: 1;
         transform: translateX(0);
     }
-
 }
 
-/* Ensure forceful display */
 #input-container.force-normal {
     position: static !important;
     left: auto !important;
@@ -288,6 +275,7 @@ h3 {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    top: calc(25vh + 70px);
 }
 
 #user-input {
@@ -307,12 +295,9 @@ h3 {
 }
 
 #user-input.tall {
-    /* Adjust the padding so text starts at the top */
     font-size: 18px;
-    /* You can keep the height if it fits your design */
     height: 60px;
 }
-
 
 #send-button {
     padding: 12px 20px;
@@ -326,7 +311,6 @@ h3 {
     transition: all 0.3s ease;
     height: 44px;
     width: 85px;
-
 }
 
 #send-button.tall {
@@ -407,11 +391,6 @@ h3 {
 
 .typing-indicator span:nth-child(3) {
     animation-delay: 0.4s;
-}
-
-@keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-5px); }
 }
 
 pre {
@@ -541,6 +520,7 @@ body.dark-mode code {
 
 #title{
     cursor: pointer;
+    transition: font-size 0.4s ease-out;
 }
 
 /* Styles for the files section */
@@ -635,275 +615,105 @@ body.dark-mode .no-files {
     }
 }
 
-/* Add these custom easing functions to index.css */
-
-/* Custom easing functions for more natural motion */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Clean, simplified animations */
+.header, .flex-container, #status-bar, #settings-btn, #input-container,
+#user-input, #send-button {
+  transition: all 0.4s ease-out;
 }
 
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes slideUp {
-  0% { transform: translateY(30px); opacity: 0; }
-  60% { transform: translateY(-5px); opacity: 0.8; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes slideDown {
-  0% { transform: translateY(0); opacity: 1; }
-  100% { transform: translateY(30px); opacity: 0; }
-}
-
-@keyframes expandHeight {
-  0% { max-height: 0; opacity: 0; }
-  40% { opacity: 0.6; }
-  100% { max-height: 1000px; opacity: 1; }
-}
-
-@keyframes collapseHeight {
-  0% { max-height: 1000px; opacity: 1; }
-  60% { opacity: 0.4; }
-  100% { max-height: 0; opacity: 0; }
-}
-
+/* Keyframe animations */
 @keyframes headerExpand {
-  0% {
+  from {
     font-size: 50px;
+    text-align: center;
     margin-top: calc(25vh - 115px);
-    letter-spacing: 0;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
   }
-  50% {
-    letter-spacing: -0.5px;
-  }
-  100% {
+  to {
     font-size: 24px;
+    text-align: left;
     margin-top: 0;
-    letter-spacing: 0;
+    position: static;
+    left: 0;
+    transform: none;
+    width: auto;
   }
 }
 
 @keyframes headerCollapse {
-  0% {
+  from {
     font-size: 24px;
+    text-align: left;
     margin-top: 0;
-    letter-spacing: 0;
+    position: static;
+    left: 0;
+    transform: none;
   }
-  50% {
-    letter-spacing: 0.5px;
-  }
-  100% {
+  to {
     font-size: 50px;
+    text-align: center;
     margin-top: calc(25vh - 115px);
-    letter-spacing: 0;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
   }
 }
 
-/* Add a subtle shadow animation for depth */
-@keyframes addShadow {
-  from { box-shadow: 0 0 0 rgba(0,0,0,0); }
-  to { box-shadow: 0 2px 8px var(--shadow-color); }
-}
-
-/* Add a subtle scale animation for the buttons */
-@keyframes buttonScale {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-/* Apply subtle hover effect to chat elements after animation */
-.user-message, .agent-message {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.user-message:hover, .agent-message:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 3px 10px var(--shadow-color);
-}
-
-/* Improve the typing indicator animation */
-@keyframes bounce {
-  0%, 60%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-7px); }
-  45% { transform: translateY(-3px); }
-}
-
-/* Add a subtle animation for new messages */
 @keyframes messageAppear {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(15px) scale(0.95);
+    transform: translateY(8px);
   }
-  60% {
+  to {
     opacity: 1;
-    transform: translateY(-3px) scale(1.01);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
-/* Apply the message appear animation in addMessage() function */
-.message-new {
-  animation: messageAppear 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-4px); }
 }
 
-/* Add these styles to index.css */
-
-/* Create a subtle background transition for the body */
-body {
-    transition: background-color 0.6s ease;
+/* Applied animations */
+.animate-header-expand {
+  animation: headerExpand 0.4s ease-out forwards;
 }
 
-/* Add a subtle gradient overlay for transitions */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle at center, transparent 70%, var(--shadow-color) 150%);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.8s ease;
-    z-index: -1;
+.animate-header-collapse {
+  animation: headerCollapse 0.4s ease-out forwards;
 }
 
-/* Add classes to control the background transition */
-body.transitioning::before {
-    opacity: 0.3;
-}
-
-/* Subtle glow effect for the title during transitions */
-h1#title {
-    position: relative;
-}
-
-h1#title::after {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: -10px;
-    right: -10px;
-    bottom: -10px;
-    background: radial-gradient(circle at center, var(--primary-color) 0%, transparent 70%);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.5s ease;
-    z-index: -1;
-    border-radius: 50%;
-}
-
-h1#title.glowing::after {
-    opacity: 0.15;
-    animation: pulsate 2s ease-in-out 1;
-}
-
-@keyframes pulsate {
-    0% { opacity: 0; transform: scale(0.8); }
-    50% { opacity: 0.2; transform: scale(1.05); }
-    100% { opacity: 0.15; transform: scale(1); }
-}
-
-/* Replace the existing headerExpand and headerCollapse animations with these updated versions */
-
-@keyframes headerExpand {
-  0% {
-    font-size: 50px;
-    margin-top: calc(25vh - 115px);
-    letter-spacing: 0;
-    transform: translateX(0);
-    text-align: center;
-    width: 100%;
-    position: relative;
-    left: 50%;
-  }
-  20% {
-    transform: translateX(-5%);
-  }
-  50% {
-    letter-spacing: -0.5px;
-    transform: translateX(-25%);
-  }
-  80% {
-    transform: translateX(-50%);
-  }
-  100% {
-    font-size: 24px;
-    margin-top: 0;
-    letter-spacing: 0;
-    transform: translateX(-50%);
-    text-align: left;
-    width: auto;
-    position: static;
-    left: 0;
-  }
-}
-
-@keyframes headerCollapse {
-  0% {
-    font-size: 24px;
-    margin-top: 0;
-    letter-spacing: 0;
-    transform: translateX(0);
-    text-align: left;
-    width: auto;
-    position: static;
-    left: 0;
-  }
-  20% {
-    transform: translateX(-5%);
-  }
-  50% {
-    letter-spacing: 0.5px;
-    transform: translateX(-25%);
-  }
-  80% {
-    transform: translateX(-45%);
-  }
-  100% {
-    font-size: 50px;
-    margin-top: calc(25vh - 115px);
-    letter-spacing: 0;
-    transform: translateX(-50%);
-    text-align: center;
-    width: 100%;
-    position: relative;
-    left: 50%;
-  }
-}
-
-/* Also update the header CSS to ensure transformations work properly */
-.header h1 {
-  transition: none; /* Remove any default transitions */
-  transform-origin: left center; /* Set transform origin */
-}
-
-.header.compact h1 {
-  /* Update these styles to work with our animations */
-  text-align: center;
-  width: 100%;
+/* Header states */
+.header.compact #title {
+  font-size: 50px;
+  margin-bottom: 20px;
   position: relative;
   left: 50%;
   transform: translateX(-50%);
+  width: 100%;
+  text-align: center;
+  margin-top: calc(25vh - 115px);
+  z-index: 5;
 }
 
-
-.animate-fade-out {
-  animation: fadeOut 0.5s ease forwards;
+.message-new {
+  animation: messageAppear 0.4s ease-out forwards;
 }
 
-.animate-collapse {
-  animation: collapseHeight 0.5s ease forwards;
+/* Typing indicator animation */
+.typing-indicator span {
+  animation: bounce 1.4s infinite ease-in-out;
 }
 
-.delay-100 {
-  animation-delay: 0.1s;
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
 }

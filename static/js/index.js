@@ -43,6 +43,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize the UI
     setupInitialUI();
+    function checkConnectionStatus() {
+    console.log("---- WebSocket Diagnostic ----");
+    console.log("isConnected:", isConnected);
+    console.log("Socket state:", socket ? ["CONNECTING", "OPEN", "CLOSING", "CLOSED"][socket.readyState] : "No socket");
+    console.log("clientId:", clientId);
+    console.log("firstMessageSent:", firstMessageSent);
+    console.log("isProcessing:", isProcessing);
+
+    // Check server settings
+    const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {};
+    console.log("Server settings:", settings);
+
+    // Try to reconnect if needed
+    if (!isConnected && socket && socket.readyState !== WebSocket.CONNECTING) {
+        console.log("Attempting reconnection...");
+        connectWebSocket();
+    }
+}
+
+// Expose the diagnostic function globally
+window.checkConnectionStatus = checkConnectionStatus;
+
+// Add this line in the DOMContentLoaded event in index.js
+console.log("Running connection diagnostic on page load");
+setTimeout(checkConnectionStatus, 1000);
 
     function setupInitialUI() {
         // Check if there's chat history in local storage
@@ -75,378 +100,235 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("No chat history or just welcome message, showing minimal UI");
         }
     }
-// Add this helper function to ensure proper header/title transitions
+// Simplified animation functions for index.js
 
-function prepareHeaderForTransition(isExpanding) {
-    const header = document.querySelector('.header');
-    const title = document.getElementById('title');
+// Improved function for header transitions
+function transitionHeader(isExpanding) {
+  const header = document.querySelector('.header');
+  const title = document.getElementById('title');
 
-    // First remove any lingering animation classes
-    title.classList.remove('animate-header-expand', 'animate-header-collapse');
+  // Remove any existing animation classes
+  title.classList.remove('animate-header-expand', 'animate-header-collapse');
 
-    if (isExpanding) {
-        // Preparing to expand from compact to full
-        console.log("Preparing header for expansion");
+  if (isExpanding) {
+    // Expanding from compact to full
+    // First prepare header styles
+    if (header.classList.contains('compact')) {
+      // Set starting position explicitly before animation
+      title.style.position = 'relative';
+      title.style.left = '50%';
+      title.style.transform = 'translateX(-50%)';
+      title.style.width = '100%';
+      title.style.textAlign = 'center';
+      title.style.zIndex = '5';
 
-        // Force correct starting position if needed
-        title.style.textAlign = 'center';
-        title.style.width = '100%';
+      // Force layout recalculation
+      void title.offsetWidth;
+
+      // Now start animation
+      header.classList.remove('compact');
+      title.classList.add('animate-header-expand');
+
+      // Clean up styles after animation
+      setTimeout(() => {
+        title.style.position = '';
+        title.style.left = '';
+        title.style.transform = '';
+        title.style.width = '';
+        title.style.textAlign = '';
+        title.style.zIndex = '';
+      }, 400);
+    }
+  } else {
+    // Collapsing from full to compact
+    if (!header.classList.contains('compact')) {
+      // Set starting position explicitly before animation
+      title.style.position = 'static';
+      title.style.left = '0';
+      title.style.transform = 'none';
+      title.style.width = 'auto';
+      title.style.textAlign = 'left';
+
+      // Force layout recalculation
+      void title.offsetWidth;
+
+      // Now start animation
+      header.classList.add('compact');
+      title.classList.add('animate-header-collapse');
+
+      // After animation completes, ensure correct final state
+      setTimeout(() => {
         title.style.position = 'relative';
         title.style.left = '50%';
         title.style.transform = 'translateX(-50%)';
-
-        // Set up for expansion animation
-        setTimeout(() => {
-            // Clear the inline styles once the animation starts
-            title.style.textAlign = '';
-            title.style.width = '';
-            title.style.position = '';
-            title.style.left = '';
-            title.style.transform = '';
-
-            // Apply the animation
-            title.classList.add('animate-header-expand');
-        }, 10);
-    } else {
-        // Preparing to collapse from full to compact
-        console.log("Preparing header for collapse");
-
-        // Force correct starting position if needed
-        title.style.textAlign = 'left';
-        title.style.width = 'auto';
-        title.style.position = 'static';
-        title.style.left = '0';
-        title.style.transform = 'none';
-
-        // Set up for collapse animation
-        setTimeout(() => {
-            // Apply the animation (inline styles will be overridden by animation)
-            title.classList.add('animate-header-collapse');
-        }, 10);
+        title.style.width = '100%';
+        title.style.textAlign = 'center';
+        title.style.zIndex = '5';
+      }, 400);
     }
+  }
 }
 
-// Modify the beginning of showFullUI function to include:
-// prepareHeaderForTransition(true);
-
-// Modify the beginning of showMinimalUI function to include:
-// prepareHeaderForTransition(false);
-// Add these improved functions to index.js to replace the current showFullUI and showMinimalUI functions
+// Simplified showFullUI function
 function showFullUI() {
-    console.log("Showing full UI with improved animations");
+  console.log("Showing full UI");
 
-    // Add transition effects to the background and title
-    document.body.classList.add('transitioning');
-    document.getElementById('title').classList.add('glowing');
+  // Get elements we need to animate
+  const flexContainer = document.querySelector('.flex-container');
+  const statusBar = document.getElementById('status-bar');
+  const settingsBtn = document.getElementById('settings-btn');
+  const header = document.querySelector('.header');
+  const inputContainer = document.getElementById('input-container');
+  const userInput = document.getElementById('user-input');
+  const sendButton = document.getElementById('send-button');
 
-    // Prepare the header for proper transition
-    prepareHeaderForTransition(true);
+  // Ensure container is displayed before animating
+  flexContainer.style.display = 'flex';
+  flexContainer.style.visibility = 'visible';
 
-    // Get references to all elements we need to animate
-    const flexContainer = document.querySelector('.flex-container');
-    const statusBar = document.getElementById('status-bar');
-    const settingsBtn = document.getElementById('settings-btn');
-    const header = document.querySelector('.header');
-    const inputContainer = document.getElementById('input-container');
-    const userInput = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-button');
+  // Transition header first
+  transitionHeader(true);
 
-    // First, ensure we have references to all required elements
-    if (!flexContainer || !statusBar || !settingsBtn || !header || !inputContainer) {
-        console.error("Missing UI elements:", {
-            flexContainer: !!flexContainer,
-            statusBar: !!statusBar,
-            settingsBtn: !!settingsBtn,
-            header: !!header,
-            inputContainer: !!inputContainer
-        });
-        return; // Don't proceed if elements are missing
-    }
+  // Show elements with CSS animations
+  flexContainer.classList.add('visible');
+  statusBar.classList.add('visible');
+  settingsBtn.classList.add('visible');
 
-    // Remove any existing animation classes
-    const animationClasses = [
-        'animate-fade-in', 'animate-fade-out', 'animate-slide-up', 'animate-slide-down',
-        'animate-expand', 'animate-collapse', 'animate-header-expand', 'animate-header-collapse',
-        'animate-input-expand', 'animate-input-collapse',
-        'delay-50', 'delay-100', 'delay-150', 'delay-200', 'delay-250',
-        'duration-300', 'duration-400', 'duration-500', 'duration-600'
-    ];
+  // Move input to normal position
+  inputContainer.classList.remove('centered');
+  inputContainer.classList.add('force-normal');
 
-    [flexContainer, statusBar, settingsBtn, header, inputContainer].forEach(el => {
-        if (el) animationClasses.forEach(cls => el.classList.remove(cls));
-    });
+  // Animate input and button to normal size
+  userInput.classList.remove('tall');
+  sendButton.classList.remove('tall');
 
-    // Prepare elements for animation - ensure they're displayed but not visible
-    flexContainer.style.display = 'flex';
-    flexContainer.style.visibility = 'visible';
-    flexContainer.style.overflow = 'hidden';
-
-    // Make status bar and settings button ready for animation
-    statusBar.style.visibility = 'visible';
-    statusBar.style.opacity = '0';
-    settingsBtn.style.opacity = '0';
-
-    // Set a small timeout to ensure display changes have applied
-    setTimeout(() => {
-        // Choreographed animation sequence - REVERSE of the minimizing sequence
-
-        // The sequence should be exact reverse of showMinimalUI:
-        // 1. First move the input container (matching step 5 of minimizing)
-        inputContainer.classList.remove('centered');
-        inputContainer.classList.add('animate-input-expand', 'force-normal');
-
-        // 2. Start expanding the header (matching step 4 of minimizing)
-        setTimeout(() => {
-            header.classList.remove('compact');
-            header.classList.add('animate-header-expand');
-
-            // Animate input and button to normal size
-            userInput.classList.remove('tall');
-            userInput.classList.add('shrink');
-            sendButton.classList.remove('tall');
-            sendButton.classList.add('shrink');
-
-            // Remove animation classes after they're done
-            setTimeout(() => {
-                userInput.classList.remove('shrink');
-                sendButton.classList.remove('shrink');
-            }, 400);
-        }, 50);
-
-        // 3. Begin expanding flex container (matching step 3 of minimizing)
-        setTimeout(() => {
-            flexContainer.classList.add('visible', 'animate-fade-in', 'animate-expand');
-        }, 100);
-
-        // 4. Fade in status bar (matching step 2 of minimizing)
-        setTimeout(() => {
-            statusBar.classList.add('visible', 'animate-fade-in');
-        }, 200);
-
-        // 5. Finally fade in settings button (matching step 1 of minimizing)
-        setTimeout(() => {
-            settingsBtn.classList.add('visible', 'animate-fade-in');
-        }, 250);
-
-        // Set the firstMessageSent flag
-        firstMessageSent = true;
-
-        // After animations complete, make sure everything is in the right state
-        setTimeout(() => {
-            // Log the final state of all elements
-            console.log("Full UI animation complete", {
-                flexContainerVisible: flexContainer.classList.contains('visible'),
-                statusBarVisible: statusBar.classList.contains('visible'),
-                headerCompact: header.classList.contains('compact'),
-                inputCentered: inputContainer.classList.contains('centered')
-            });
-
-            // Clean up animation classes after they're done
-            [flexContainer, statusBar, settingsBtn, header, inputContainer].forEach(el => {
-                if (el) animationClasses.forEach(cls => el.classList.remove(cls));
-            });
-
-            // Remove transition effects
-            document.body.classList.remove('transitioning');
-            document.getElementById('title').classList.remove('glowing');
-        }, 800);
-    }, 20);
+  // Set the firstMessageSent flag
+  firstMessageSent = true;
 }
 
+// Improved showMinimalUI function
 function showMinimalUI() {
-    console.log("Showing minimal UI with improved animations");
+  console.log("Showing minimal UI");
 
-    // Add transition effects to the background and title
-    document.body.classList.add('transitioning');
-    document.getElementById('title').classList.add('glowing');
+  // Get elements we need to animate
+  const flexContainer = document.querySelector('.flex-container');
+  const statusBar = document.getElementById('status-bar');
+  const settingsBtn = document.getElementById('settings-btn');
+  const header = document.querySelector('.header');
+  const inputContainer = document.getElementById('input-container');
+  const userInput = document.getElementById('user-input');
+  const sendButton = document.getElementById('send-button');
 
-    // Prepare the header for proper transition
-    prepareHeaderForTransition(false);
+  // Hide elements with clean CSS transitions
+  settingsBtn.classList.remove('visible');
+  statusBar.classList.remove('visible');
+  flexContainer.classList.remove('visible');
 
-    // Get the elements we need to animate
-    const flexContainer = document.querySelector('.flex-container');
-    const statusBar = document.getElementById('status-bar');
-    const settingsBtn = document.getElementById('settings-btn');
-    const header = document.querySelector('.header');
-    const inputContainer = document.getElementById('input-container');
-    const userInput = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-button');
+  // Transition header
+  transitionHeader(false);
 
-    // First, ensure we have references to all required elements
-    if (!flexContainer || !statusBar || !settingsBtn || !header || !inputContainer) {
-        console.error("Missing UI elements for minimal UI transition");
-        return; // Don't proceed if elements are missing
+  // Center input container
+  inputContainer.classList.add('centered');
+  inputContainer.classList.remove('force-normal');
+
+  // Make input and button taller
+  userInput.classList.add('tall');
+  sendButton.classList.add('tall');
+
+  // Position inputs properly below title
+  inputContainer.style.position = 'absolute';
+  inputContainer.style.top = 'calc(25vh + 70px)';
+  inputContainer.style.left = '50%';
+  inputContainer.style.transform = 'translateX(-50%)';
+  inputContainer.style.zIndex = '4';
+
+  // Reset first message flag
+  firstMessageSent = false;
+
+  // Hide container after animation completes
+  setTimeout(() => {
+    if (!firstMessageSent) {
+      flexContainer.style.display = 'none';
+      flexContainer.style.visibility = 'hidden';
     }
-
-    // Remove any existing animation classes
-    const animationClasses = [
-        'animate-fade-in', 'animate-fade-out', 'animate-slide-up', 'animate-slide-down',
-        'animate-expand', 'animate-collapse', 'animate-header-expand', 'animate-header-collapse',
-        'animate-input-expand', 'animate-input-collapse',
-        'delay-50', 'delay-100', 'delay-150', 'delay-200', 'delay-250',
-        'duration-300', 'duration-400', 'duration-500', 'duration-600'
-    ];
-
-    [flexContainer, statusBar, settingsBtn, header, inputContainer].forEach(el => {
-        if (el) animationClasses.forEach(cls => el.classList.remove(cls));
-    });
-
-    // Start animating elements out in sequence
-
-    // 1. Fade out settings button first
-    settingsBtn.classList.add('animate-fade-out');
-    settingsBtn.classList.remove('visible');
-
-    // 2. Begin fading out status bar slightly after
-    statusBar.classList.add('animate-fade-out', 'delay-50');
-    statusBar.classList.remove('visible');
-
-    // 3. Start collapsing flex container
-    flexContainer.classList.add('animate-fade-out', 'animate-collapse', 'delay-100');
-    flexContainer.classList.remove('visible');
-
-    // 4. Start collapsing the header to compact mode
-    header.classList.add('compact');
-    // Note: We're not adding 'animate-header-collapse' here anymore
-    // as it's handled by prepareHeaderForTransition
-
-    // 5. Start centering the input container
-    inputContainer.classList.add('animate-input-collapse', 'delay-200');
-
-    // After a short delay, apply the final CSS classes
-    setTimeout(() => {
-        // Apply the compact class without the animation class (handled by prepareHeaderForTransition)
-        header.classList.add('compact');
-        inputContainer.classList.add('centered');
-        inputContainer.classList.remove('force-normal');
-
-        // Animate input and button to become taller
-        userInput.classList.add('tall', 'grow');
-        sendButton.classList.add('tall', 'grow');
-
-        // Remove animation classes after they're done
-        setTimeout(() => {
-            userInput.classList.remove('grow');
-            sendButton.classList.remove('grow');
-        }, 400);
-
-        // Position the input container appropriately
-        inputContainer.style.position = 'absolute';
-        inputContainer.style.top = '25%';
-        inputContainer.style.left = '50%';
-        inputContainer.style.transform = 'translateX(-50%)';
-
-        firstMessageSent = false;
-
-        // Make the container invisible for performance
-        setTimeout(() => {
-            if (!firstMessageSent) { // Only if still in minimal mode
-                flexContainer.style.display = 'none';
-                flexContainer.style.visibility = 'hidden';
-            }
-
-            // Clean up animation classes after they're done
-            [flexContainer, statusBar, settingsBtn, header, inputContainer].forEach(el => {
-                if (el) animationClasses.forEach(cls => el.classList.remove(cls));
-            });
-
-            // Remove transition effects
-            document.body.classList.remove('transitioning');
-            document.getElementById('title').classList.remove('glowing');
-        }, 600);
-    }, 300);
+  }, 400); // Match animation duration
 }
 
-// Improved resetToInitialState function with better animation
+// Simplified resetToInitialState function
 function resetToInitialState() {
-    console.log("Resetting to initial state with improved animations");
+  console.log("Resetting to initial state");
 
-    // Clear chat container with a fade-out effect
-    const chatContainer = document.getElementById('chat-container');
-    chatContainer.classList.add('animate-fade-out', 'duration-300');
+  // Clear chat container
+  const chatContainer = document.getElementById('chat-container');
+  chatContainer.innerHTML = '';
 
+  // Reset firstMessageSent flag
+  firstMessageSent = false;
+
+  // Reset localStorage chat history
+  const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {};
+  settings.chatHistory = [];
+  localStorage.setItem('openManusSettings', JSON.stringify(settings));
+
+  // Transition to minimal UI
+  showMinimalUI();
+
+  // Add welcome message if connected
+  if (isConnected) {
     setTimeout(() => {
-        // Clear content after fade out
-        chatContainer.innerHTML = '';
-        chatContainer.classList.remove('animate-fade-out', 'duration-300');
-    }, 300);
+      addMessage("Welcome to OpenManus! What can I help you with?", 'agent', false);
+    }, 500);
+  }
 
-    // Reset firstMessageSent flag
-    firstMessageSent = false;
+  // Reset and focus input
+  const userInput = document.getElementById('user-input');
+  userInput.value = '';
+  userInput.focus();
+}
 
-    // Reset localStorage data
-    const serverHostInput = document.getElementById('server-host');
-    const serverPortInput = document.getElementById('server-port');
-    const useSecureInput = document.getElementById('use-secure');
-    const darkModeToggle = document.getElementById('dark-mode');
+// Simplified function to add messages with clean animation
+function addMessage(text, sender, saveToHistory = true) {
+  // Force full UI visibility when any message is added
+  if (!firstMessageSent) {
+    firstMessageSent = true;
+    showFullUI();
+  }
 
-    const settings = {
-        serverHost: serverHostInput.value,
-        serverPort: parseInt(serverPortInput.value),
-        useSecure: useSecureInput.checked,
-        darkMode: darkModeToggle.checked,
-        chatHistory: []
-    };
-    localStorage.setItem('openManusSettings', JSON.stringify(settings));
+  const messageDiv = document.createElement('div');
+  messageDiv.className = sender === 'user' ? 'user-message message-new' : 'agent-message message-new';
 
-    // Animate transition to minimal UI
-    showMinimalUI();
+  // Format code blocks
+  let formattedText = text.replace(/```([\w-]*)\n([\s\S]*?)\n```/g, function(match, language, code) {
+    return `<pre><code class="${language}">${code}</code></pre>`;
+  });
 
-    // Add a welcome message if connected (but don't count it toward history)
-    if (isConnected) {
-        // Wait until UI transition completes to add welcome message
-        setTimeout(() => {
-            addMessage("Welcome to OpenManus! What can I help you with?", 'agent', false);
-        }, 700);
-    }
+  // Format inline code
+  formattedText = formattedText.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-    // Reset input if needed
-    const userInput = document.getElementById('user-input');
-    userInput.value = '';
+  messageDiv.innerHTML = formattedText;
+  chatContainer.appendChild(messageDiv);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    // Focus input
-    userInput.focus();
+  // Remove animation class after it completes
+  setTimeout(() => {
+    messageDiv.classList.remove('message-new');
+  }, 400);
 
-    // Reset the send button completely
-    const originalButton = document.getElementById('send-button');
-    const originalParent = originalButton.parentNode;
+  // Save chat history when a new message is added
+  if (saveToHistory) {
+    saveSettings();
+  }
+}
 
-    // Create a completely new button
-    const newButton = document.createElement('button');
-    newButton.id = 'send-button';
-    newButton.textContent = 'Send';
-    newButton.className = originalButton.className;
-    if (!newButton.classList.contains('tall')) {
-        newButton.classList.add('tall');
-    }
+// Simplified typing indicator
+function showTypingIndicator() {
+  if (typingIndicator) return;
 
-    // Replace the old button with the new one
-    originalParent.replaceChild(newButton, originalButton);
-
-    // Add the special click handler
-    newButton.addEventListener('click', function(event) {
-        console.log("Send button clicked after reset");
-
-        // Show the full UI with animations
-        showFullUI();
-
-        // Now trigger the message sending
-        if (typeof window.sendMessage === 'function') {
-            window.sendMessage();
-        } else {
-            // Fallback if global function isn't accessible
-            const message = userInput.value.trim();
-            if (message) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'user-message';
-                messageDiv.textContent = message;
-                chatContainer.appendChild(messageDiv);
-                userInput.value = '';
-            }
-        }
-    });
-
-    console.log("Reset complete with animations");
+  typingIndicator = document.createElement('div');
+  typingIndicator.className = 'typing-indicator message-new';
+  typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+  chatContainer.appendChild(typingIndicator);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
     // Load settings from localStorage
@@ -690,60 +572,6 @@ function saveSettings() {
         }
     }
 
-    // Replace the current addMessage function with this improved version
-
-function addMessage(text, sender, saveToHistory = true) {
-    // Force full UI visibility when any message is added
-    if (!firstMessageSent) {
-        firstMessageSent = true;
-        showFullUI();
-    }
-
-    const messageDiv = document.createElement('div');
-    messageDiv.className = sender === 'user' ? 'user-message message-new' : 'agent-message message-new';
-
-    // Format code blocks
-    let formattedText = text.replace(/```([\w-]*)\n([\s\S]*?)\n```/g, function(match, language, code) {
-        return `<pre><code class="${language}">${code}</code></pre>`;
-    });
-
-    // Format inline code
-    formattedText = formattedText.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    messageDiv.innerHTML = formattedText;
-    chatContainer.appendChild(messageDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-
-    // Remove the animation class after it completes
-    setTimeout(() => {
-        messageDiv.classList.remove('message-new');
-    }, 500);
-
-    // Save chat history when a new message is added
-    if (saveToHistory) {
-        saveSettings();
-    }
-}
-
-// Also update the typing indicator for more consistent animation
-function showTypingIndicator() {
-    if (typingIndicator) return;
-
-    typingIndicator = document.createElement('div');
-    typingIndicator.className = 'typing-indicator message-new';
-    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-    chatContainer.appendChild(typingIndicator);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-
-    // Remove the animation class after it completes
-    setTimeout(() => {
-        if (typingIndicator) {
-            typingIndicator.classList.remove('message-new');
-        }
-    }, 500);
-}
-
-// Replace the current sendMessage function with this improved version
 
 function sendMessage() {
     const message = userInput.value.trim();

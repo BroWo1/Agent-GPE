@@ -45,7 +45,10 @@
 
     <div id="input-container" class="centered">
         <textarea id="user-input" rows="3" placeholder="How can I help you today?"></textarea>
-        <button id="send-button" onclick="sendMessage()">Send</button>
+        <!-- In index.html, replace the send button with this (removing the onclick attribute): -->
+<button id="send-button">Send</button>
+
+<!-- Then replace the script at the bottom of index.html with this simplified version: -->
     </div>
 
 
@@ -64,62 +67,143 @@
         </div>
     </div>
 </body>
+
 <script>
-// This is a self-contained script that will fix the button issue
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Running button fix script");
+    console.log("Initializing enhanced button handler");
     const sendButton = document.getElementById('send-button');
     const userInput = document.getElementById('user-input');
-    
+
     if (sendButton) {
         // Remove any existing onclick attribute
         sendButton.removeAttribute('onclick');
 
-        // Add a completely isolated click handler
-        sendButton.addEventListener('click', function(event) {
-            console.log("Send button clicked - isolated handler");
-            event.preventDefault();
-            event.stopPropagation();
+        // Clear any existing listeners (important cleanup)
+        const newButton = sendButton.cloneNode(true);
+        sendButton.parentNode.replaceChild(newButton, sendButton);
 
-            // Show the full UI - force transitions
-            const flexContainer = document.querySelector('.flex-container');
-            const statusBar = document.getElementById('status-bar');
-            const settingsBtn = document.getElementById('settings-btn');
-            const header = document.querySelector('.header');
-            const inputContainer = document.getElementById('input-container');
+        // Add our single, robust handler
+        newButton.addEventListener('click', function() {
+            console.log("Send button clicked - enhanced handler");
 
-            // Force display transitions
-            flexContainer.classList.add('visible');
-            flexContainer.style.opacity = '1';
-            flexContainer.style.maxHeight = '1000px';
-            flexContainer.style.visibility = 'visible';
+            const message = userInput.value.trim();
+            if (!message) {
+                console.log("Empty message, not sending");
+                return;
+            }
 
-            statusBar.classList.add('visible');
-            settingsBtn.classList.add('visible');
-            header.classList.remove('compact');
-            inputContainer.classList.remove('centered');
+            console.log("Message content:", message);
 
-            // Now trigger sending functionality
-            if (window.sendMessage) {
-                window.sendMessage();
+            // Check connection state
+            if (typeof isConnected !== 'undefined') {
+                console.log("Connection state:", isConnected ? "Connected" : "Disconnected");
             } else {
-                // Fallback if global function isn't accessible
-                const message = userInput.value.trim();
-                if (message) {
-                    // Just add the message to indicate it's working
+                console.log("Warning: isConnected variable not accessible");
+            }
+
+            // Direct approach - bypass the window.sendMessage to avoid scope issues
+            try {
+                // Get first message state
+                const isFirstMessage = (typeof firstMessageSent !== 'undefined') ? !firstMessageSent : true;
+                console.log("Is first message:", isFirstMessage);
+
+                if (isFirstMessage) {
+                    // For first message, we need to ensure UI transition
+                    console.log("Handling first message with UI transition");
+
+                    // Force show full UI
+                    if (typeof showFullUI === 'function') {
+                        showFullUI();
+                    } else {
+                        console.log("Warning: showFullUI function not accessible");
+                        // Manual fallback
+                        document.querySelector('.flex-container').classList.add('visible');
+                        document.getElementById('status-bar').classList.add('visible');
+                        document.getElementById('settings-btn').classList.add('visible');
+                        document.querySelector('.header').classList.remove('compact');
+                        document.getElementById('input-container').classList.remove('centered');
+                    }
+
+                    // Use direct DOM access to display message
+                    setTimeout(() => {
+                        // Add message to UI
+                        const chatContainer = document.getElementById('chat-container');
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = 'user-message';
+                        messageDiv.textContent = message;
+                        chatContainer.appendChild(messageDiv);
+
+                        // Send via WebSocket if accessible
+                        const socket = window.socket;
+                        if (socket && socket.readyState === 1) {
+                            console.log("Sending via WebSocket");
+                            socket.send(JSON.stringify({
+                                request: message,
+                                clientId: localStorage.getItem('openManusClientId') || 'unknown'
+                            }));
+                        } else {
+                            console.log("Socket not available or not connected");
+                            // Show error in chat
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'agent-message';
+                            errorDiv.textContent = "Connection error: Not connected to server. Your message was not sent.";
+                            chatContainer.appendChild(errorDiv);
+                        }
+
+                        // Clear input
+                        userInput.value = '';
+
+                        // Auto-scroll chat
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }, 600);
+                } else {
+                    console.log("Handling subsequent message");
+
+                    // For subsequent messages, simpler logic
+                    // Add message to UI immediately
                     const chatContainer = document.getElementById('chat-container');
                     const messageDiv = document.createElement('div');
                     messageDiv.className = 'user-message';
                     messageDiv.textContent = message;
                     chatContainer.appendChild(messageDiv);
-                    userInput.value = '';
-                }
-            }
 
-            return false;
+                    // Send via WebSocket if accessible
+                    const socket = window.socket;
+                    if (socket && socket.readyState === 1) {
+                        console.log("Sending via WebSocket");
+                        socket.send(JSON.stringify({
+                            request: message,
+                            clientId: localStorage.getItem('openManusClientId') || 'unknown'
+                        }));
+                    } else {
+                        console.log("Socket not available or not connected");
+                        // Show error in chat
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'agent-message';
+                        errorDiv.textContent = "Connection error: Not connected to server. Your message was not sent.";
+                        chatContainer.appendChild(errorDiv);
+                    }
+
+                    // Clear input
+                    userInput.value = '';
+
+                    // Auto-scroll chat
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+
+                // Update first message state
+                if (typeof firstMessageSent !== 'undefined' && !firstMessageSent) {
+                    firstMessageSent = true;
+                    console.log("Updated firstMessageSent =", firstMessageSent);
+                }
+
+            } catch (error) {
+                console.error("Error in send button handler:", error);
+                alert("There was an error sending your message. Please check the console for details.");
+            }
         });
 
-        console.log("Button handler attached successfully");
+        console.log("Enhanced button handler attached successfully");
     } else {
         console.error("Send button not found in the DOM");
     }
