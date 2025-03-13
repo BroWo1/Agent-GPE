@@ -5,12 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgentGPE</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
+
     <link href="{% static 'css/index.css' %}" rel="stylesheet">
     <script src="{% static 'js/index.js' %}"></script>
     <link rel="shortcut icon" type="image/x-icon" href="{% static 'imgs/agentlogo.png' %}">
 </head>
 <body>
-    <div class="header compact">
+    <div class="header">
         <h1 id="title">Agent GPE</h1>
         <button id="settings-btn" onclick="toggleSettings()">⚙️ Settings</button>
     </div>

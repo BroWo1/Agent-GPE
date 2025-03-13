@@ -26,84 +26,12 @@ function updateInputPosition() {
   }
 }
 
+window.addEventListener('load', function() {
+  // Small delay to ensure elements are fully rendered
+  setTimeout(updateInputPosition, 300);
+});
 
 
-// Update the transitionHeader function to trigger input position updates
-function transitionHeader(isExpanding) {
-  const header = document.querySelector('.header');
-  const title = document.getElementById('title');
-
-  // Remove any existing animation classes
-  title.classList.remove('animate-header-expand', 'animate-header-collapse', 'exiting');
-
-  if (isExpanding) {
-    // Expanding from compact to full
-    // First prepare header styles
-    if (header.classList.contains('compact')) {
-      // Reset the top margin when expanding
-      header.style.marginTop = '0';
-
-      // Set starting position explicitly before animation
-      title.style.position = 'relative';
-      title.style.left = '50%';
-      title.style.transform = 'translateX(-50%)';
-      title.style.width = '100%';
-      title.style.textAlign = 'center';
-      title.style.zIndex = '5';
-
-      // Force layout recalculation
-      void title.offsetWidth;
-
-      // Now start animation
-      header.classList.remove('compact');
-      title.classList.add('animate-header-expand');
-
-      // Clean up styles after animation
-      setTimeout(() => {
-        title.style.position = '';
-        title.style.left = '';
-        title.style.transform = '';
-        title.style.width = '';
-        title.style.textAlign = '';
-        title.style.zIndex = '';
-      }, 400);
-    }
-  } else {
-    // Collapsing from full to compact
-    if (!header.classList.contains('compact')) {
-      // Add exiting class for smooth transition
-      title.classList.add('exiting');
-
-      // Set starting position explicitly before animation
-      title.style.position = 'static';
-      title.style.left = '0';
-      title.style.transform = 'none';
-      title.style.width = 'auto';
-      title.style.textAlign = 'left';
-
-      // Force layout recalculation
-      void title.offsetWidth;
-
-      // Now start animation
-      header.classList.add('compact');
-      title.classList.add('animate-header-collapse');
-
-      // After animation completes, ensure correct final state
-      setTimeout(() => {
-        title.classList.remove('exiting');
-        title.style.position = 'relative';
-        title.style.left = '50%';
-        title.style.transform = 'translateX(-50%)';
-        title.style.width = '100%';
-        title.style.textAlign = 'center';
-        title.style.zIndex = '5';
-
-        // Update input position after header animation
-        updateInputPosition();
-      }, 400);
-    }
-  }
-}
 
 // Add window resize event listener to keep everything positioned correctly
 window.addEventListener('resize', () => {
@@ -254,13 +182,16 @@ cancelButton.addEventListener('click', function() {
             connectWebSocket();
         }
     }
-    function handleWebSocketMessage(event) {
+    // Update this part of the handleWebSocketMessage function
+function handleWebSocketMessage(event) {
   try {
     const data = JSON.parse(event.data);
     console.log("WebSocket message received:", data.status);
 
     // Forward file-related messages to the file handler
-    if (window.fileHandler) {
+    if (window.fileHandler &&
+        (data.status === 'file_created' ||
+         (data.status === 'complete' && data.files))) {
       window.fileHandler.handleMessage(data);
     }
 
@@ -298,12 +229,14 @@ cancelButton.addEventListener('click', function() {
           // Handle messages
           if (data.messages && data.messages.length > 0) {
             for (const msg of data.messages) {
-              if (msg.role === 'assistant') {
-                addMessage(msg.content || "No content", 'agent');
+              if (msg.role === 'assistant' && msg.content) {
+                // Only add messages that actually have content
+                addMessage(msg.content, 'agent');
               }
             }
-          } else {
-            addMessage(data.result || "Task completed", 'agent');
+          } else if (data.result) {
+            // Only add a result message if there's actually a result
+            addMessage(data.result, 'agent');
           }
         } else if (data.status === 'cancelled') {
           statusDisplay.textContent = 'Cancelled';
@@ -323,6 +256,11 @@ cancelButton.addEventListener('click', function() {
 
         // Save updated chat history
         saveSettings();
+        break;
+
+      case 'file_created':
+        // Add specific handling for file_created status
+        addProgressEntry(`File created: ${data.file.file_name}`, 'step');
         break;
 
       // Handle other cases
@@ -619,15 +557,38 @@ function addMessage(text, sender, saveToHistory = true) {
   const messageDiv = document.createElement('div');
   messageDiv.className = sender === 'user' ? 'user-message message-new' : 'agent-message message-new';
 
-  // Format code blocks
-  let formattedText = text.replace(/```([\w-]*)\n([\s\S]*?)\n```/g, function(match, language, code) {
-    return `<pre><code class="${language}">${code}</code></pre>`;
-  });
+  // Check if marked is available for markdown parsing
+  if (window.marked && sender === 'agent') {
+    // Configure marked for safe parsing
+    marked.setOptions({
+      breaks: true,        // Convert \n to <br>
+      gfm: true,           // Use GitHub Flavored Markdown
+      headerIds: false,    // Don't add IDs to headers
+      sanitize: false,     // Don't sanitize (marked handles this internally)
+    });
 
-  // Format inline code
-  formattedText = formattedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Parse markdown to HTML
+    try {
+      const parsedHtml = marked.parse(text);
+      messageDiv.innerHTML = parsedHtml;
+    } catch (e) {
+      console.error("Error parsing markdown:", e);
+      // Fallback to previous formatting method
+      let formattedText = text.replace(/```([\w-]*)\n([\s\S]*?)\n```/g, function(match, language, code) {
+        return `<pre><code class="${language}">${code}</code></pre>`;
+      });
+      formattedText = formattedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+      messageDiv.innerHTML = formattedText;
+    }
+  } else {
+    // Fallback to previous formatting method (for user messages or if marked is not available)
+    let formattedText = text.replace(/```([\w-]*)\n([\s\S]*?)\n```/g, function(match, language, code) {
+      return `<pre><code class="${language}">${code}</code></pre>`;
+    });
+    formattedText = formattedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+    messageDiv.innerHTML = formattedText;
+  }
 
-  messageDiv.innerHTML = formattedText;
   chatContainer.appendChild(messageDiv);
   chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -1377,6 +1338,7 @@ function addClearFilesButton() {
     }
 }
 
+// Replace the fileHandler object definition with this fixed version
 window.fileHandler = {
     initialize: function() {
         initializeFileSection();
@@ -1387,7 +1349,17 @@ window.fileHandler = {
             updateFilesDisplay();
         });
     },
-    handleMessage: handleWebSocketMessage,
+    // Create a proper message handler instead of the circular reference
+    handleMessage: function(data) {
+        // Handle file-specific messages
+        if (data.status === 'file_created' && data.file) {
+            console.log("File created:", data.file);
+            addFile(data.file);
+        } else if (data.status === 'complete' && data.files && data.files.length > 0) {
+            console.log("Files in complete message:", data.files);
+            updateFilesList(data.files);
+        }
+    },
     clearFiles: clearFiles,
     addFile: addFile,
     getSettings: function() {
@@ -1431,19 +1403,3 @@ document.addEventListener('DOMContentLoaded', function() {
     */
 });
 
-setTimeout(() => {
-  const testBtn = document.createElement('button');
-  testBtn.textContent = 'Test Cancel Button';
-  testBtn.style.marginTop = '10px';
-  document.body.appendChild(testBtn);
-
-  testBtn.addEventListener('click', () => {
-    const cancelBtn = document.getElementById('cancel-button');
-    if (cancelBtn) {
-      cancelBtn.style.display = cancelBtn.style.display === 'none' ? 'block' : 'none';
-      console.log('Toggled cancel button to:', cancelBtn.style.display);
-    } else {
-      console.error('Cancel button not found!');
-    }
-  });
-}, 1000);

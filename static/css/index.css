@@ -63,6 +63,7 @@ body {
     margin-top: max(15vh, 80px); /* More responsive approach using max() */
     position: relative;
     z-index: 10;
+    height: 100px;
 }
 
 .header.compact h1 {
@@ -947,4 +948,87 @@ body.dark-mode .no-files {
 /* Add specific exit class that can be applied via JavaScript */
 .exiting {
     transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
+.agent-message h1 {
+  font-size: 1.8em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.3em;
+}
+
+.agent-message h2 {
+  font-size: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.agent-message h3 {
+  font-size: 1.3em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.agent-message ul, .agent-message ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.agent-message li {
+  margin-bottom: 0.3em;
+}
+
+.agent-message p {
+  margin-bottom: 1em;
+}
+
+.agent-message blockquote {
+  border-left: 3px solid var(--border-color);
+  padding-left: 1em;
+  color: #777;
+  margin: 1em 0;
+}
+
+.agent-message code {
+  padding: 0.2em 0.4em;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.agent-message pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1em;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.agent-message pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.agent-message img {
+  max-width: 100%;
+  margin: 1em 0;
+}
+
+.agent-message table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.agent-message th, .agent-message td {
+  padding: 8px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+}
+
+.agent-message th {
+  background-color: rgba(0, 0, 0, 0.05);
 }
