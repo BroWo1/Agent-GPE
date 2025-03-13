@@ -3,7 +3,118 @@ function toggleSettings() {
     // Check for both 'none' and empty string (initial state)
     settingsPanel.style.display = (settingsPanel.style.display === 'none' || settingsPanel.style.display === '') ? 'block' : 'none';
 }
+// Add this function to dynamically position the input container based on the title's position
+function updateInputPosition() {
+  const header = document.querySelector('.header');
+  const title = document.getElementById('title');
+  const inputContainer = document.getElementById('input-container');
 
+  // Only adjust if we're in minimal UI mode (with the centered class)
+  if (inputContainer.classList.contains('centered')) {
+    // Get the title's actual dimensions and position
+    const titleRect = title.getBoundingClientRect();
+
+    // Position the input container below the title with appropriate spacing
+    // Use the actual bottom position of the title plus a relative gap
+    const gap = Math.min(window.innerHeight * 0.05, 30); // Responsive gap, max 30px
+
+    inputContainer.style.position = 'absolute';
+    inputContainer.style.top = `${titleRect.bottom + gap}px`;
+    inputContainer.style.left = '50%';
+    inputContainer.style.transform = 'translateX(-50%)';
+    inputContainer.style.zIndex = '4';
+  }
+}
+
+
+
+// Update the transitionHeader function to trigger input position updates
+function transitionHeader(isExpanding) {
+  const header = document.querySelector('.header');
+  const title = document.getElementById('title');
+
+  // Remove any existing animation classes
+  title.classList.remove('animate-header-expand', 'animate-header-collapse', 'exiting');
+
+  if (isExpanding) {
+    // Expanding from compact to full
+    // First prepare header styles
+    if (header.classList.contains('compact')) {
+      // Reset the top margin when expanding
+      header.style.marginTop = '0';
+
+      // Set starting position explicitly before animation
+      title.style.position = 'relative';
+      title.style.left = '50%';
+      title.style.transform = 'translateX(-50%)';
+      title.style.width = '100%';
+      title.style.textAlign = 'center';
+      title.style.zIndex = '5';
+
+      // Force layout recalculation
+      void title.offsetWidth;
+
+      // Now start animation
+      header.classList.remove('compact');
+      title.classList.add('animate-header-expand');
+
+      // Clean up styles after animation
+      setTimeout(() => {
+        title.style.position = '';
+        title.style.left = '';
+        title.style.transform = '';
+        title.style.width = '';
+        title.style.textAlign = '';
+        title.style.zIndex = '';
+      }, 400);
+    }
+  } else {
+    // Collapsing from full to compact
+    if (!header.classList.contains('compact')) {
+      // Add exiting class for smooth transition
+      title.classList.add('exiting');
+
+      // Set starting position explicitly before animation
+      title.style.position = 'static';
+      title.style.left = '0';
+      title.style.transform = 'none';
+      title.style.width = 'auto';
+      title.style.textAlign = 'left';
+
+      // Force layout recalculation
+      void title.offsetWidth;
+
+      // Now start animation
+      header.classList.add('compact');
+      title.classList.add('animate-header-collapse');
+
+      // After animation completes, ensure correct final state
+      setTimeout(() => {
+        title.classList.remove('exiting');
+        title.style.position = 'relative';
+        title.style.left = '50%';
+        title.style.transform = 'translateX(-50%)';
+        title.style.width = '100%';
+        title.style.textAlign = 'center';
+        title.style.zIndex = '5';
+
+        // Update input position after header animation
+        updateInputPosition();
+      }, 400);
+    }
+  }
+}
+
+// Add window resize event listener to keep everything positioned correctly
+window.addEventListener('resize', () => {
+  // Throttle the resize event to improve performance
+  if (!window.resizeTimeout) {
+    window.resizeTimeout = setTimeout(() => {
+      window.resizeTimeout = null;
+      updateInputPosition();
+    }, 200);
+  }
+});
 function saveAndApplySettings() {
     settings = saveSettings();
     document.getElementById('settings-panel').style.display = 'none';
@@ -237,6 +348,7 @@ cancelButton.addEventListener('click', function() {
   } catch (error) {
     console.error("Error handling WebSocket message:", error);
   }
+  setTimeout(updateInputPosition, 500);
 }
 
 // Expose the diagnostic function globally
@@ -280,17 +392,85 @@ setTimeout(checkConnectionStatus, 1000);
 // Simplified animation functions for index.js
 
 // Improved function for header transitions
+
+// Improved showMinimalUI function with fixed positioning
+
+function showMinimalUI() {
+  console.log("Showing minimal UI");
+
+  // Get elements we need to animate
+  const flexContainer = document.querySelector('.flex-container');
+  const statusBar = document.getElementById('status-bar');
+  const settingsBtn = document.getElementById('settings-btn');
+  const header = document.querySelector('.header');
+  const inputContainer = document.getElementById('input-container');
+  const userInput = document.getElementById('user-input');
+  const sendButton = document.getElementById('send-button');
+
+  // First add exit animation classes
+  settingsBtn.classList.add('exiting');
+  statusBar.classList.add('exiting');
+  flexContainer.classList.add('exiting');
+
+  // Then remove visible classes to trigger transitions
+  settingsBtn.classList.remove('visible');
+  statusBar.classList.remove('visible');
+  flexContainer.classList.remove('visible');
+
+  // Transition header with proper top margin
+  header.style.marginTop = 'calc(25vh - 115px)';
+  transitionHeader(false);
+
+  // Center input container with smooth transition
+  inputContainer.classList.add('exiting');
+  inputContainer.classList.add('centered');
+  inputContainer.classList.remove('force-normal');
+
+  // Make input and button taller
+  userInput.classList.add('tall');
+  sendButton.classList.add('tall');
+
+  // IMPORTANT: Position input container properly below title
+  // The 25vh + 170px ensures it appears below the title with proper spacing
+  inputContainer.style.position = 'absolute';
+  inputContainer.style.top = 'calc(25vh + 170px)';
+  inputContainer.style.left = '50%';
+  inputContainer.style.transform = 'translateX(-50%)';
+  inputContainer.style.zIndex = '4';
+
+  // Reset first message flag
+  firstMessageSent = false;
+
+  // Remove exit animation classes after transition completes
+  setTimeout(() => {
+    settingsBtn.classList.remove('exiting');
+    statusBar.classList.remove('exiting');
+    flexContainer.classList.remove('exiting');
+    inputContainer.classList.remove('exiting');
+
+    // Hide container after animation completes
+    if (!firstMessageSent) {
+      flexContainer.style.display = 'none';
+      flexContainer.style.visibility = 'hidden';
+    }
+  }, 500); // Match animation duration + a little buffer
+}
+
+// Improved function for header transitions with proper positioning
 function transitionHeader(isExpanding) {
   const header = document.querySelector('.header');
   const title = document.getElementById('title');
 
   // Remove any existing animation classes
-  title.classList.remove('animate-header-expand', 'animate-header-collapse');
+  title.classList.remove('animate-header-expand', 'animate-header-collapse', 'exiting');
 
   if (isExpanding) {
     // Expanding from compact to full
     // First prepare header styles
     if (header.classList.contains('compact')) {
+      // Reset the top margin when expanding
+      header.style.marginTop = '0';
+
       // Set starting position explicitly before animation
       title.style.position = 'relative';
       title.style.left = '50%';
@@ -319,6 +499,9 @@ function transitionHeader(isExpanding) {
   } else {
     // Collapsing from full to compact
     if (!header.classList.contains('compact')) {
+      // Add exiting class for smooth transition
+      title.classList.add('exiting');
+
       // Set starting position explicitly before animation
       title.style.position = 'static';
       title.style.left = '0';
@@ -335,6 +518,7 @@ function transitionHeader(isExpanding) {
 
       // After animation completes, ensure correct final state
       setTimeout(() => {
+        title.classList.remove('exiting');
         title.style.position = 'relative';
         title.style.left = '50%';
         title.style.transform = 'translateX(-50%)';
@@ -346,7 +530,7 @@ function transitionHeader(isExpanding) {
   }
 }
 
-// Simplified showFullUI function
+// Also update the showFullUI function to reset the header margin
 function showFullUI() {
   console.log("Showing full UI");
 
@@ -358,6 +542,9 @@ function showFullUI() {
   const inputContainer = document.getElementById('input-container');
   const userInput = document.getElementById('user-input');
   const sendButton = document.getElementById('send-button');
+
+  // Reset header margin
+  header.style.marginTop = '0';
 
   // Ensure container is displayed before animating
   flexContainer.style.display = 'flex';
@@ -374,6 +561,10 @@ function showFullUI() {
   // Move input to normal position
   inputContainer.classList.remove('centered');
   inputContainer.classList.add('force-normal');
+  inputContainer.style.position = '';
+  inputContainer.style.top = '';
+  inputContainer.style.left = '';
+  inputContainer.style.transform = '';
 
   // Animate input and button to normal size
   userInput.classList.remove('tall');
@@ -381,54 +572,6 @@ function showFullUI() {
 
   // Set the firstMessageSent flag
   firstMessageSent = true;
-}
-
-// Improved showMinimalUI function
-function showMinimalUI() {
-  console.log("Showing minimal UI");
-
-  // Get elements we need to animate
-  const flexContainer = document.querySelector('.flex-container');
-  const statusBar = document.getElementById('status-bar');
-  const settingsBtn = document.getElementById('settings-btn');
-  const header = document.querySelector('.header');
-  const inputContainer = document.getElementById('input-container');
-  const userInput = document.getElementById('user-input');
-  const sendButton = document.getElementById('send-button');
-
-  // Hide elements with clean CSS transitions
-  settingsBtn.classList.remove('visible');
-  statusBar.classList.remove('visible');
-  flexContainer.classList.remove('visible');
-
-  // Transition header
-  transitionHeader(false);
-
-  // Center input container
-  inputContainer.classList.add('centered');
-  inputContainer.classList.remove('force-normal');
-
-  // Make input and button taller
-  userInput.classList.add('tall');
-  sendButton.classList.add('tall');
-
-  // Position inputs properly below title
-  inputContainer.style.position = 'absolute';
-  inputContainer.style.top = 'calc(25vh + 70px)';
-  inputContainer.style.left = '50%';
-  inputContainer.style.transform = 'translateX(-50%)';
-  inputContainer.style.zIndex = '4';
-
-  // Reset first message flag
-  firstMessageSent = false;
-
-  // Hide container after animation completes
-  setTimeout(() => {
-    if (!firstMessageSent) {
-      flexContainer.style.display = 'none';
-      flexContainer.style.visibility = 'hidden';
-    }
-  }, 400); // Match animation duration
 }
 
 // Simplified resetToInitialState function
