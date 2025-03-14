@@ -512,44 +512,10 @@ function showFullUI() {
   firstMessageSent = true;
 }
 
-// Simplified resetToInitialState function
-function resetToInitialState() {
-  if(firstMessageSent){
-      console.log("Resetting to initial state");
-
-  // Clear chat container
-  const chatContainer = document.getElementById('chat-container');
-  chatContainer.innerHTML = '';
-
-  // Reset firstMessageSent flag
-  firstMessageSent = false;
-
-  // Reset localStorage chat history
-  const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {};
-  settings.chatHistory = [];
-  localStorage.setItem('openManusSettings', JSON.stringify(settings));
-
-  // Transition to minimal UI
-  showMinimalUI();
-
-  // Add welcome message if connected
-  if (isConnected) {
-    setTimeout(() => {
-      addMessage("Welcome to OpenManus! What can I help you with?", 'agent', false);
-    }, 500);
-  }
-
-  // Reset and focus input
-  const userInput = document.getElementById('user-input');
-  userInput.value = '';
-  userInput.focus();
-  }
-}
-
-// Simplified function to add messages with clean animation
-function addMessage(text, sender, saveToHistory = true) {
-  // Force full UI visibility when any message is added
-  if (!firstMessageSent) {
+// Improved addMessage function with force parameter
+function addMessage(text, sender, saveToHistory = true, forceMinimalUI = false) {
+  // Force full UI visibility when any message is added, unless forceMinimalUI is true
+  if (!firstMessageSent && !forceMinimalUI) {
     firstMessageSent = true;
     showFullUI();
   }
@@ -600,6 +566,70 @@ function addMessage(text, sender, saveToHistory = true) {
   // Save chat history when a new message is added
   if (saveToHistory) {
     saveSettings();
+  }
+}
+
+// Simplified resetToInitialState function with cancellation
+function resetToInitialState() {
+  if(firstMessageSent){
+    console.log("Resetting to initial state");
+
+    // First, cancel any ongoing processing
+    if (isConnected && isProcessing) {
+      console.log("Cancelling ongoing request before reset");
+
+      // Send cancellation request to server
+      socket.send(JSON.stringify({
+        command: "cancel",
+        clientId: clientId
+      }));
+
+      // Update status to give immediate feedback
+      statusDisplay.textContent = 'Cancellation requested...';
+
+      // Also add to progress log
+      addProgressEntry('Cancellation requested by reset to initial state', 'step');
+
+      // Update processing state
+      isProcessing = false;
+
+      // Hide the cancel button if it's visible
+      const cancelButton = document.getElementById('cancel-button');
+      if (cancelButton) {
+        cancelButton.style.display = 'none';
+      }
+
+      // Hide typing indicator if shown
+      hideTypingIndicator();
+    }
+
+    // Clear chat container
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.innerHTML = '';
+
+    // Reset firstMessageSent flag
+    firstMessageSent = false;
+
+    // Reset localStorage chat history
+    const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {};
+    settings.chatHistory = [];
+    localStorage.setItem('openManusSettings', JSON.stringify(settings));
+
+    // Transition to minimal UI
+    showMinimalUI();
+
+    // Add welcome message if connected, but force minimal UI to stay
+    if (isConnected) {
+      setTimeout(() => {
+        // Pass true for forceMinimalUI parameter to prevent UI expansion
+        addMessage("Welcome to OpenManus! What can I help you with?", 'agent', false, true);
+      }, 500);
+    }
+
+    // Reset and focus input
+    const userInput = document.getElementById('user-input');
+    userInput.value = '';
+    userInput.focus();
   }
 }
 
