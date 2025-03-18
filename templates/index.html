@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentGPE</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
+
+    <link href="{% static 'css/index.css' %}" rel="stylesheet">
+    <script src="{% static 'js/index.js' %}"></script>
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'imgs/agentlogo.png' %}">
+</head>
+<body>
+    <div class="header">
+        <h1 id="title">Agent GPE</h1>
+        <button id="settings-btn" onclick="toggleSettings()">⚙️ Settings</button>
+    </div>
+
+    <div id="settings-panel">
+        <div class="settings-grid">
+            <label for="server-host">Server Host:</label>
+            <input type="text" id="server-host" value="localhost">
+
+            <label for="server-port">Server Port:</label>
+            <input type="number" id="server-port" value="3000" min="1" max="65535">
+
+            <label>Connection Security:</label>
+<div class="secure-info">Always using HTTPS (Secure)</div>
+
+            <label for="dark-mode">Dark Mode:</label>
+            <div class="theme-switch">
+                <input type="checkbox" id="dark-mode" class="theme-switch-checkbox">
+                <label for="dark-mode" class="theme-switch-label"></label>
+            </div>
+        </div>
+        <button id="save-settings" class="save-btn" onclick="saveAndApplySettings()">Save Settings</button>
+    </div>
+
+    <div class="flex-container">
+        <div id="chat-container"></div>
+        <div id="progress-container">
+            <h3>Processing Steps</h3>
+            <div id="progress-log"></div>
+        </div>
+    </div>
+
+    <div id="input-container" class="centered">
+        <textarea id="user-input" rows="3" placeholder="How can I help you today?"></textarea>
+        <!-- In index.html, replace the send button with this (removing the onclick attribute): -->
+<button id="send-button">Send</button>
+
+<!-- Then replace the script at the bottom of index.html with this simplified version: -->
+    </div>
+
+
+    <div id="status-bar">
+        <div id="status">Disconnected</div>
+        <div class="buttons-container">
+            <button id="clear-progress">Clear Progress</button>
+            <button id="clear-chat">Clear Chat</button>
+        </div>
+    </div>
+        <!-- Files section HTML template -->
+    <div id="files-container" class="files-section">
+        <h3>Generated Files</h3>
+        <div id="files-list" class="files-list">
+            <div class="no-files">No files generated yet</div>
+        </div>
+    </div>
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-branding">
+            <img src="{% static 'imgs/logo2.png' %}" alt="GPE Club Logo" class="footer-logo">
+            <div class="footer-credit">
+                <span>Made by <a href="https://github.com/BroWo1" class="footer-link">Will Li</a></span>
+                <span>and the <a href="https://www.gpeclub.com/" class="footer-link">GPE Club</a></span>
+            </div>
+        </div>
+        <div class="footer-info">
+            <span>Built on <a href="https://github.com/mannaandpoem/OpenManus" class="footer-link">OpenManus</a></span>
+            <span class="copyright">&copy; {% now "Y" %} Agent GPE</span>
+        </div>
+    </div>
+</footer>
+</body>
+
+<script>
+</script>
+</html>

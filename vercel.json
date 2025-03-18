@@ -1,0 +1,27 @@
+{
+  "builds": [
+    {
+      "src": "AgentGPE/wsgi.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.9"
+      }
+    },
+    {
+      "src": "static/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "AgentGPE/wsgi.py"
+    }
+  ],
+  "buildCommand": "python -m pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput"
+}
