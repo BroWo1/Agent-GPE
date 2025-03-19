@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-_u(fvor*dkbljbp3kfq__
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Update ALLOWED_HOSTS to include your vercel app domain
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app', 'agent.gpeclub.com', 'gpeclub.com']
 
 # Application definition
 INSTALLED_APPS = [
