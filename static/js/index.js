@@ -810,7 +810,7 @@ setTimeout(checkConnectionStatus, 1000);
 
             // Create new storage with empty chat history
             const settings = {
-                serverHost: '117.72.120.34',
+                serverHost: 'server.gpeclub.com',
                 serverPort: 2000,
                 useSecure: false,
                 darkMode: darkModeToggle.checked,
@@ -1152,7 +1152,7 @@ function showTypingIndicator() {
 
     function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {
-        serverHost: '117.72.120.34',
+        serverHost: 'server.gpeclub.com',
         serverPort: 2000,
         darkMode: false,
         chatHistory: []
@@ -1644,7 +1644,7 @@ function updateFilesDisplay() {
     initializeFileSection();
 
     const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {
-        serverHost: '117.72.120.34',
+        serverHost: 'server.gpeclub.com',
         serverPort: 2000
     };
 
@@ -1766,7 +1766,7 @@ function updateFilesDisplay() {
 function getCorrectFileUrl(fileId) {
     // Get server settings from localStorage
     const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {
-        serverHost: '117.72.120.34',
+        serverHost: 'server.gpeclub.com',
         serverPort: 2000
     };
 
@@ -1904,7 +1904,7 @@ window.fileHandler = {
     addFile: addFile,
     getSettings: function() {
         return JSON.parse(localStorage.getItem('openManusSettings')) || {
-            serverHost: '117.72.120.34',
+            serverHost: 'server.gpeclub.com',
             serverPort: 2000,
             useSecure: false
         };
