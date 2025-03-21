@@ -1643,6 +1643,11 @@ function updateFilesDisplay() {
     // Make sure the file section exists
     initializeFileSection();
 
+    const settings = JSON.parse(localStorage.getItem('openManusSettings')) || {
+        serverHost: '117.72.120.34',
+        serverPort: 2000
+    };
+
     const filesContainer = document.getElementById('files-container');
     const filesList = document.getElementById('files-list');
     if (!filesList) {
